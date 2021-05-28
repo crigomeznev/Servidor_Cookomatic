@@ -93,7 +93,19 @@ public class CookomaticServer {
         LoginTuple lt = null;
 
         try {
-            lt = (LoginTuple)ois.readObject();
+            // llegim login
+            String login = ois.readUTF();
+            // enviem ok
+            oos.writeInt(1);
+            oos.flush();
+            
+            // llegim passwd
+            String password = ois.readUTF();
+            // enviem ok
+            oos.writeInt(1);
+            oos.flush();
+            
+            lt = new LoginTuple(login, password, null);
             // client envia inicialment sense sessionId, som nosaltres qui l'hi donarem
             
             // prova
@@ -101,14 +113,37 @@ public class CookomaticServer {
             int res = credencialsCorrectes? 1 : 0;
 
             // enviem 1 si ok, 0 si no ok
+            System.out.println("Enviant resposta");
+            oos.flush();
             oos.writeInt(res);
+//            oos.writeObject(res);
+            System.out.println("Resposta enviada");
             
             // si la resposta ha estat ok, també enviem tupla amb session_id i dades usu
             if (credencialsCorrectes) {
                 lt.setSessionId(sessionCount);
-                oos.writeObject(lt);
+//                oos.writeObject(lt);
+
+                // enviem login
+                oos.writeUTF(login);
+                oos.flush();
+                // llegim ok
+                ois.readInt();
+
+                // enviem login
+                oos.writeUTF(password);
+                oos.flush();
+                // llegim ok
+                ois.readInt();
+
+                // enviem login
+                oos.writeLong(lt.getSessionId());
+                oos.flush();
+                // llegim ok
+                ois.readInt();
+
             }
-        } catch (IOException | ClassNotFoundException ex) {
+        } catch (IOException ex) {
             System.out.println(ex);
             ex.printStackTrace();
         }
