@@ -10,8 +10,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.cookomatic.jdbc.DBManager;
 import org.cookomatic.protocol.LoginTuple;
 
 /**
@@ -24,58 +27,95 @@ public class CookomaticServer {
      * @param args the command line arguments
      */
 //static ServerSocket variable
-    private static ServerSocket server;
+    private static ServerSocket socketConnections;
     //socket server port on which it will listen
     private static int port = 9876;
-    
-    
+
     // TODO: llista de sockets i clients, per ara provem amb 1 client unic
     Socket socket;
     ObjectInputStream ois;
     ObjectOutputStream oos;
-    
+
     private static long sessionCount;
     
+    private List<Thread> clientHandlers;
     
-    public static void main(String args[]) throws IOException, ClassNotFoundException{
-        CookomaticServer cs = new CookomaticServer();
+    // Accés a la BD
+    private DBManager dbManager;
 
-        //create the socket server object
-        server = new ServerSocket(port);
-        
-        //keep listens indefinitely until receives 'exit' call or program terminates
-        while(true){
-            System.out.println("Waiting for the client request");
-            //creating socket and waiting for client connection
-            cs.socket = server.accept();
-            // TODO: threads per atendre clients
-            sessionCount++;
+    
+    
+    // Constructor
+    public CookomaticServer(String nomFitxerPropietats) {
+        this.dbManager = new DBManager(nomFitxerPropietats);
+        this.clientHandlers = new ArrayList<>();
 
-            cs.iniConnection();
-            
-            
-            // TODO switch amb codis de peticions
-            cs.userLogin();
-
-            cs.closeConnection();
+        try {
+            //create the socket server object
+            this.socketConnections = new ServerSocket(port);
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+            ex.printStackTrace();
         }
+    }
+    
+    
+    
+    
+    
+    // Main: el traurem d'aquí posteriorment
+    public static void main(String args[]) throws IOException, ClassNotFoundException {
+        CookomaticServer cs = new CookomaticServer("connexioMySQL.properties");
+
+        while (true) { // TODO: while ! tancar servidor
+            Socket s = null;
+
+            try {
+                // socket object to receive incoming client requests
+                System.out.println("Esperant clients...");
+                s = socketConnections.accept();
+
+                System.out.println("A new client is connected : " + s);
+
+                // obtaining input and out streams
+//                DataInputStream dis = new DataInputStream(s.getInputStream());
+//                DataOutputStream dos = new DataOutputStream(s.getOutputStream());
+                ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
+                ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
+                
+                System.out.println("Assigning new thread for this client");
+
+                // create a new thread object
+//                sessionCount++;
+                ClientHandler ch = new ClientHandler(s, ois, oos, sessionCount++, cs, cs.dbManager);
+                cs.clientHandlers.add(ch);
+                // ara donem session id al thread
+//                ch.setSessionId(client);
+                
+                // Invoking the start() method
+                ch.start();
+
+            } catch (Exception e) {
+                s.close();
+                e.printStackTrace();
+            }
+        }
+        // TODO: tancar el server i el dbmanager
+//        cs.dbManager.tancarDBManager();
+
 //        System.out.println("Shutting down Socket server!!");
         //close the ServerSocket object
 //        server.close();
-    }    
-
-
+    }
 
     /* Protocol
         
         Petició: CODI + TUPLA
     
         Resposta: CODI_RESPOSTA (1 o 0) [+ TUPLA]
-    */
-    
-
+     */
     //  Mètodes
-    public void iniConnection(){
+    public void iniConnection() {
         try {
             //read from socket to ObjectInputStream object
             ois = new ObjectInputStream(socket.getInputStream());
@@ -86,72 +126,8 @@ public class CookomaticServer {
             ex.printStackTrace();
         }
     }
-    
-    
-    
-    public void userLogin(){
-        LoginTuple lt = null;
 
-        try {
-            // llegim login
-            String login = ois.readUTF();
-            // enviem ok
-            oos.writeInt(1);
-            oos.flush();
-            
-            // llegim passwd
-            String password = ois.readUTF();
-            // enviem ok
-            oos.writeInt(1);
-            oos.flush();
-            
-            lt = new LoginTuple(login, password, null);
-            // client envia inicialment sense sessionId, som nosaltres qui l'hi donarem
-            
-            // prova
-            boolean credencialsCorrectes = lt.getUser().equalsIgnoreCase(lt.getPassword());
-            int res = credencialsCorrectes? 1 : 0;
-
-            // enviem 1 si ok, 0 si no ok
-            System.out.println("Enviant resposta");
-            oos.flush();
-            oos.writeInt(res);
-//            oos.writeObject(res);
-            System.out.println("Resposta enviada");
-            
-            // si la resposta ha estat ok, també enviem tupla amb session_id i dades usu
-            if (credencialsCorrectes) {
-                lt.setSessionId(sessionCount);
-//                oos.writeObject(lt);
-
-                // enviem login
-                oos.writeUTF(login);
-                oos.flush();
-                // llegim ok
-                ois.readInt();
-
-                // enviem login
-                oos.writeUTF(password);
-                oos.flush();
-                // llegim ok
-                ois.readInt();
-
-                // enviem login
-                oos.writeLong(lt.getSessionId());
-                oos.flush();
-                // llegim ok
-                ois.readInt();
-
-            }
-        } catch (IOException ex) {
-            System.out.println(ex);
-            ex.printStackTrace();
-        }
-        
-    }
-    
-    
-    public void closeConnection(){
+    public void closeConnection() {
         try {
             //close resources
             ois.close();
@@ -161,8 +137,28 @@ public class CookomaticServer {
             System.out.println(ex);
             ex.printStackTrace();
         }
-        
+
     }
+    
+    
+    
+    public void removeClientHandler(ClientHandler ch){
+        
+        // TODO: afegir mutex
+        if (ch.socket.isClosed())
+            this.clientHandlers.remove(ch);
+        else
+            System.out.println("No es pot eliminar clientHandler perque socket no està tancat");
+    }
+    
+    
+    
+    
     
 
 }
+
+
+
+
+
