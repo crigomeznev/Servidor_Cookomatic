@@ -2,22 +2,23 @@ package org.cookomatic.jdbc;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.cookomatic.model.cuina.Categoria;
-import org.cookomatic.model.sala.Cambrer;
-import org.cookomatic.model.sala.Taula;
 import org.cookomatic.protocol.InfoTaula;
+import org.milaifontanals.cookomatic.model.cuina.Categoria;
+import org.milaifontanals.cookomatic.model.cuina.Plat;
+import org.milaifontanals.cookomatic.model.sala.Cambrer;
 
 public class DBManager {
 
     private Connection con;
     
-    private PreparedStatement getTaules, getCategories;
+    private PreparedStatement getTaules, getCategories, getPlats;
     
 
     public DBManager(String nomFitxerPropietats) {
@@ -65,6 +66,7 @@ public class DBManager {
         "order by t.numero");
         
         getCategories = con.prepareStatement("select * from categoria");
+        getPlats = con.prepareStatement("select * from plat");
     }
     
 
@@ -142,6 +144,25 @@ public class DBManager {
     }
     
     
+    public List<Plat> getPlats() {
+        List<Plat> plats = new ArrayList<>();
+        try {
+            System.out.println("Executant prepared statement getCategories");
+
+            ResultSet rs = getPlats.executeQuery();
+            
+            while(rs.next())
+            {
+                Plat plat = construirPlat(rs);
+                plats.add(plat);
+            }
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+        return plats;
+    }
+    
+    
     
 
     // Construeix un objecte cambrer a partir de la fila actual en què es troba el ResultSet
@@ -195,6 +216,26 @@ public class DBManager {
 
         Categoria categoria = new Categoria(codi, nom, color);
         return categoria;        
+    }
+
+
+    // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
+    private Plat construirPlat(ResultSet rs) throws SQLException {
+        System.out.println("CONSTRUIR PLAT");
+        
+        Long codi = rs.getLong("codi");
+        String nom = rs.getString("nom");
+        String descripcioMD = rs.getString("descripcio_md");
+        BigDecimal preu = rs.getBigDecimal("preu");
+        // TODO: get foto
+        Boolean disponible = rs.getBoolean("disponible");
+        Long codiCategoria = rs.getLong("categoria");
+        Categoria cat = new Categoria(codiCategoria, null, 0);
+
+        // com enllacem plat amb categoria? -> diccionari de codi - categoria, codi - plat
+        Plat plat = new Plat(codi, nom, descripcioMD, preu, null, disponible, cat, null);
+
+        return plat;
     }
 
 

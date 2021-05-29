@@ -14,12 +14,12 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.cookomatic.jdbc.DBManager;
-import org.cookomatic.model.cuina.Categoria;
-import org.cookomatic.model.cuina.Plat;
-import org.cookomatic.model.sala.Cambrer;
 import org.cookomatic.protocol.CodiOperacio;
 import org.cookomatic.protocol.InfoTaula;
 import org.cookomatic.protocol.LoginTuple;
+import org.milaifontanals.cookomatic.model.cuina.Categoria;
+import org.milaifontanals.cookomatic.model.cuina.Plat;
+import org.milaifontanals.cookomatic.model.sala.Cambrer;
 
 /**
  *
@@ -300,16 +300,11 @@ public class ClientHandler extends Thread {
                 return;
             }
             
-            // 1 - get categories
+            // 1 - get categories------------------------------------------------------------------
             
             // sessionId vàlid, llegim info taules de la BD
             categories = dbManager.getCategories(); // TODO: es podria fer amb un singleton
-//            System.out.println("getcategories = ");
-//            for(InfoTaula it : infoTaules){
-//                System.out.println(it.getNumero()+" "+it.getNomCambrer());
-//            }
-//            if (infoTaules.isEmpty()) System.out.println("BUIDA");
-            
+
             // Enviem tamany de l'arraylist infoTaules
             oos.writeInt(categories.size());
             oos.flush();
@@ -317,13 +312,36 @@ public class ClientHandler extends Thread {
             // Enviem arraylist element a element
             for(Categoria cat : categories)
             {
+                System.out.println(cat);
                 oos.writeObject(cat);
                 oos.flush();
                 
                 // llegim ok
                 ois.read();
             }
-            System.out.println("Infotaules enviades amb exit");
+            System.out.println("Categories enviades amb exit");
+
+
+            // 2 - get plats------------------------------------------------------------------
+            
+            // sessionId vàlid, llegim info taules de la BD
+            plats = dbManager.getPlats(); // TODO: es podria fer amb un singleton
+
+            // Enviem tamany de l'arraylist infoTaules
+            oos.writeInt(plats.size());
+            oos.flush();
+            
+            // Enviem arraylist element a element
+            for(Plat plat : plats)
+            {
+                System.out.println(plat);
+                oos.writeObject(plat);
+                oos.flush();
+                
+                // llegim ok
+                ois.read();
+            }
+            System.out.println("Plats enviades amb exit");
 
         } catch (IOException | ClassNotFoundException ex) {
             System.out.println(ex);
