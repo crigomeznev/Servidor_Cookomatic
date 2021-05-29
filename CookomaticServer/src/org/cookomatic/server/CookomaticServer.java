@@ -11,7 +11,10 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.cookomatic.jdbc.DBManager;
@@ -39,6 +42,7 @@ public class CookomaticServer {
     private static long sessionCount;
     
     private List<Thread> clientHandlers;
+    private Set<Long> sessionIds; // llista a temps real on tindrem tots els session ids dels usuaris connectats en el moment
     
     // Accés a la BD
     private DBManager dbManager;
@@ -49,6 +53,7 @@ public class CookomaticServer {
     public CookomaticServer(String nomFitxerPropietats) {
         this.dbManager = new DBManager(nomFitxerPropietats);
         this.clientHandlers = new ArrayList<>();
+        this.sessionIds = new HashSet<>();
 
         try {
             //create the socket server object
@@ -60,7 +65,9 @@ public class CookomaticServer {
     }
     
     
-    
+    public static long getSessionCount() {
+        return sessionCount;
+    }
     
     
     // Main: el traurem d'aquí posteriorment
@@ -87,7 +94,7 @@ public class CookomaticServer {
 
                 // create a new thread object
 //                sessionCount++;
-                ClientHandler ch = new ClientHandler(s, ois, oos, sessionCount++, cs, cs.dbManager);
+                ClientHandler ch = new ClientHandler(s, ois, oos, cs, cs.dbManager);
                 cs.clientHandlers.add(ch);
                 // ara donem session id al thread
 //                ch.setSessionId(client);
@@ -149,6 +156,56 @@ public class CookomaticServer {
             this.clientHandlers.remove(ch);
         else
             System.out.println("No es pot eliminar clientHandler perque socket no està tancat");
+    }
+
+    
+    
+
+    // retorna nou session id i l'afegeix a la llista
+    public Long getNewSessionId(){
+        long newSessionId = (long)sessionIds.size()+1;
+        
+        sessionIds.add(newSessionId);
+        
+        return newSessionId;
+    }
+    
+//    public boolean addSessionId(Long sessionId){
+//        boolean res = false;
+//        if (sessionId != null){
+//            res = sessionIds.add(sessionId);
+//        } else{
+//            System.out.println("no es pot inserir session id null");
+//        }
+//
+//        // si hem pogut afegir el client, incrementem sessionCount
+//        if (res) sessionCount++;
+//        return res;
+//    }
+
+    public boolean removeSessionId(Long sessionId){
+        if (sessionId != null){
+            return sessionIds.remove(sessionId);
+        } else{
+            System.out.println("no es pot eliminar session id null");
+            return false;
+        }
+    }
+    
+    public boolean sessionIdExists(Long sessionId){
+        System.out.println("session ids actuals:");
+        for(Long session_id : sessionIds){
+            System.out.println("session id = "+session_id);
+        }
+        
+        
+        
+        if (sessionId != null){
+            return sessionIds.contains(sessionId);
+        } else{
+            System.out.println("no es pot comprovar existencia de session id null");
+            return false;
+        }        
     }
     
     

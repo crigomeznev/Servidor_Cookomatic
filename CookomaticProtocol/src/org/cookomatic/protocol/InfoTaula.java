@@ -5,11 +5,13 @@
  */
 package org.cookomatic.protocol;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Usuario
  */
-public class InfoTaula {
+public class InfoTaula implements Serializable {
     private int numero;
     private Long codiComanda; // pot ser null!
     private boolean esMeva;

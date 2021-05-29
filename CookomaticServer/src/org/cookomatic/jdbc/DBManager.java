@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.cookomatic.model.cuina.Categoria;
 import org.cookomatic.model.sala.Cambrer;
 import org.cookomatic.model.sala.Taula;
 import org.cookomatic.protocol.InfoTaula;
@@ -16,7 +17,7 @@ public class DBManager {
 
     private Connection con;
     
-    private PreparedStatement getTaules;
+    private PreparedStatement getTaules, getCategories;
     
 
     public DBManager(String nomFitxerPropietats) {
@@ -52,7 +53,7 @@ public class DBManager {
     
     private void prepararStatements() throws SQLException {
         getTaules = con.prepareStatement(
-        "select 	t.numero as taula, co.codi as codi_comanda,\n" +
+        "select 	t.numero as numero, co.codi as codi_comanda,\n" +
         "        (select count(*) from linia_comanda where comanda = co.codi)\n" +
         "			as plats_totals, -- platsTotals\n" +
         "        (select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA')\n" +
@@ -62,6 +63,8 @@ public class DBManager {
         "				left join cambrer ca on co.cambrer = ca.codi\n" +
         "where not(co.finalitzada) or co.finalitzada is null\n" +
         "order by t.numero");
+        
+        getCategories = con.prepareStatement("select * from categoria");
     }
     
 
@@ -118,6 +121,25 @@ public class DBManager {
         }
         return infoTaules;
     }
+
+
+    public List<Categoria> getCategories() {
+        List<Categoria> categories = new ArrayList<>();
+        try {
+            System.out.println("Executant prepared statement getCategories");
+
+            ResultSet rs = getCategories.executeQuery();
+            
+            while(rs.next())
+            {
+                Categoria categoria = construirCategoria(rs);
+                categories.add(categoria);
+            }
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+        return categories;
+    }
     
     
     
@@ -152,12 +174,28 @@ public class DBManager {
         Integer platsPreparats = rs.getInt("plats_preparants");
         String nomCambrer = rs.getString("nom_cambrer");
         
-        boolean esMeva = nomCambrer.equalsIgnoreCase(user); // taula és meva si el cambrer actual sóc jo
+        boolean esMeva = false;
+        // si la taula no tenia cap cambrer: rs.wasNull()
+        if (!rs.wasNull())
+            esMeva = nomCambrer.equalsIgnoreCase(user); // taula és meva si el cambrer actual sóc jo
 
         InfoTaula infoTaula = new InfoTaula(numero, codiComanda, esMeva, platsTotals, platsPreparats, nomCambrer);
+        System.out.println("Nova infotaula = "+numero+"/"+codiComanda+" cambrer="+nomCambrer+" esmeva="+esMeva);
+        System.out.println("\tuser="+user);
         return infoTaula;
     }
 
+    // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
+    private Categoria construirCategoria(ResultSet rs) throws SQLException {
+        System.out.println("CONSTRUIR CATEGORIA");
+        
+        Long codi = rs.getLong("codi");
+        String nom = rs.getString("nom");
+        Integer color = rs.getInt("color");
+
+        Categoria categoria = new Categoria(codi, nom, color);
+        return categoria;        
+    }
 
 
 }
