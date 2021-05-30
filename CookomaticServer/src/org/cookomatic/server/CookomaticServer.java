@@ -63,6 +63,19 @@ public class CookomaticServer {
             ex.printStackTrace();
         }
     }
+
+    @Override
+    protected void finalize() throws Throwable {
+        System.out.println("Tancant servidor");
+        dbManager.tancarDBManager();
+        System.out.println("dbManager tancat");
+
+        super.finalize(); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    
+    
+    
     
     
     public static long getSessionCount() {
@@ -73,6 +86,18 @@ public class CookomaticServer {
     // Main: el traurem d'aquí posteriorment
     public static void main(String args[]) throws IOException, ClassNotFoundException {
         CookomaticServer cs = new CookomaticServer("connexioMySQL.properties");
+        
+        
+        // Tancar-ho tot quan tanquem el servidor
+        Runtime.getRuntime().addShutdownHook(new Thread()
+        {
+            public void run() {
+                System.out.println("TANCANT SERVIDOR");
+            }
+        });
+        
+        
+        
 
         while (true) { // TODO: while ! tancar servidor
             Socket s = null;

@@ -18,14 +18,16 @@ public class InfoTaula implements Serializable {
     private int platsTotals;
     private int platsPreparats;
     private String nomCambrer; // user de la BD
+    private boolean comandaFinalitzada;
 
-    public InfoTaula(int numero, Long codiComanda, boolean esMeva, int platsTotals, int platsPreparats, String nomCambrer) {
-        this.numero = numero;
-        this.codiComanda = codiComanda;
-        this.esMeva = esMeva;
-        this.platsTotals = platsTotals;
-        this.platsPreparats = platsPreparats;
-        this.nomCambrer = nomCambrer;
+    public InfoTaula(int numero, Long codiComanda, boolean esMeva, int platsTotals, int platsPreparats, String nomCambrer, boolean comandaFinalitzada) {
+        setNumero(numero);
+        setCodiComanda(codiComanda);
+        setEsMeva(esMeva);
+        setPlatsTotals(platsTotals);
+        setPlatsPreparats(platsPreparats);
+        setNomCambrer(nomCambrer);
+        setComandaFinalitzada(comandaFinalitzada);
     }
 
     public int getNumero() {
@@ -74,6 +76,19 @@ public class InfoTaula implements Serializable {
 
     public void setNomCambrer(String nomCambrer) {
         this.nomCambrer = nomCambrer;
+    }
+
+    @Override
+    public String toString() {
+        return "taula=" + numero + ", codiComanda=" + codiComanda+", Meva=" + esMeva + ", platsTotals=" + platsTotals + ", platsPreparats=" + platsPreparats + ", cambrer=" + nomCambrer + ", fin="+comandaFinalitzada+"'}'";
+    }
+
+    public boolean isComandaFinalitzada() {
+        return comandaFinalitzada;
+    }
+
+    public void setComandaFinalitzada(boolean comandaFinalitzada) {
+        this.comandaFinalitzada = comandaFinalitzada;
     }
 
 

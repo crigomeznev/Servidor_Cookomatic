@@ -111,6 +111,7 @@ public class ClientHandler extends Thread {
                         break;
                     case 6:
                         System.out.println("User asked for BuidarTaula");
+                        buidarTaula();
                         break;
                     case 7:
                         System.out.println("User asked for GetTaulaSeleccionada");
@@ -248,7 +249,8 @@ public class ClientHandler extends Thread {
             infoTaules = dbManager.getTaules(loginTuple.getCambrer().getUser()); // TODO: es podria fer en un singleton
             System.out.println("gettaules = ");
             for(InfoTaula it : infoTaules){
-                System.out.println(it.getNumero()+" "+it.getNomCambrer());
+                System.out.println("Nova infotaula = "+it.getNumero()+"/"+it.getCodiComanda()+" esmeva="+it.isEsMeva()+", finalitzada="+it.isComandaFinalitzada());
+                System.out.println("\tuser="+it.getNomCambrer());
             }
             if (infoTaules.isEmpty()) System.out.println("BUIDA");
             
@@ -521,6 +523,64 @@ public class ClientHandler extends Thread {
                 System.out.println("Comanda inserida amb èxit");
             else
                 System.out.println("ERror en inserir comanda");
+        } catch (Exception ex) {
+            System.out.println(ex);
+            ex.printStackTrace();
+        } finally {
+            try {
+                oos.close();
+                ois.close();
+                socket.close();
+            } catch (IOException ex) {
+                System.out.println(ex);
+                ex.printStackTrace();
+            }
+        }
+
+        
+    }
+
+
+    public void buidarTaula()
+    {
+        InfoTaula infoTaula;
+        LoginTuple loginTuple;
+        int res;
+        
+        try {
+            // llegim sessionId (logintuple)
+            System.out.println("llegint logintuple");
+            loginTuple = (LoginTuple)ois.readObject();
+            System.out.println("sessionId llegit = "+loginTuple.getSessionId());
+
+            // enviem resposta: procedirem si session id existeix en el server actualment, altrament avortarem
+            if (server.sessionIdExists(loginTuple.getSessionId()))
+                res = CodiOperacio.OK.getNumVal();
+            else
+                res = CodiOperacio.KO.getNumVal();
+            
+            oos.writeInt(res);
+            oos.flush();
+            
+            // Si el session id del client no coincideix amb el del client actual, avortem operació
+            // Cada ClientHandler que atén a un client té un session id
+            if (res == CodiOperacio.KO.getNumVal()){
+//                System.out.println("Session ID erroni, avortem operació");
+//                return;
+                throw new Exception("Session ID erroni, avortem operació");
+            }
+            
+            // buidarTaula------------------------------------------------------------------
+            
+            // sessionId vàlid, llegim infoTaula
+            infoTaula = (InfoTaula)ois.readObject();
+
+            res = dbManager.buidarTaula(infoTaula.getNumero());
+            
+            // Enviem resposta
+            oos.writeInt(res);
+            oos.flush();
+
         } catch (Exception ex) {
             System.out.println(ex);
             ex.printStackTrace();

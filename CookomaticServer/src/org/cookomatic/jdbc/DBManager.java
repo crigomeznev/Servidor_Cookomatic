@@ -23,8 +23,7 @@ public class DBManager {
     private Connection con;
     
     private PreparedStatement getTaules, getCategories, getPlats;
-    private PreparedStatement insertComanda, insertLiniaComanda;
-    private String insertComandaSql;
+    private PreparedStatement insertComanda, insertLiniaComanda, updateBuidarTaula;
     
     // meves
     private PreparedStatement getTaulaSeleccionada, getComandesPerTaula;
@@ -63,17 +62,45 @@ public class DBManager {
     }
     
     private void prepararStatements() throws SQLException {
+//        getTaules = con.prepareStatement(
+//        "select 	t.numero as numero, co.codi as codi_comanda,\n" +
+//        "        (select count(*) from linia_comanda where comanda = co.codi)\n" +
+//        "			as plats_totals, -- platsTotals\n" +
+//        "        (select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA')\n" +
+//        "			as plats_preparants, -- platsPreparats\n" +
+//        "		ca.user as nom_cambrer\n" +
+//        "from taula t 	left join comanda co on co.taula = t.numero\n" +
+//        "				left join cambrer ca on co.cambrer = ca.codi\n" +
+//        "order by t.numero");
+//        getTaules = con.prepareStatement(
+//        "select t.numero as numero, co.codi as codi_comanda,\n" +
+//        "		(select count(*) from linia_comanda where comanda = co.codi) as plats_totals,\n" +
+//        "		(select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA') as plats_preparats,\n" +
+//        "		ca.user as nom_cambrer,\n" +
+//        "        co.finalitzada\n" +
+//        "from taula t 	left join comanda co on co.taula = t.numero\n" +
+//        "				left join cambrer ca on co.cambrer = ca.codi\n" +
+//        "where co.codi is null or co.finalitzada = false\n" +
+//        "order by t.numero");
         getTaules = con.prepareStatement(
-        "select 	t.numero as numero, co.codi as codi_comanda,\n" +
-        "        (select count(*) from linia_comanda where comanda = co.codi)\n" +
-        "			as plats_totals, -- platsTotals\n" +
-        "        (select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA')\n" +
-        "			as plats_preparants, -- platsPreparats\n" +
-        "		ca.user as nom_cambrer\n" +
-        "from taula t 	left join comanda co on co.taula = t.numero\n" +
-        "				left join cambrer ca on co.cambrer = ca.codi\n" +
-        "where not(co.finalitzada) or co.finalitzada is null\n" +
-        "order by t.numero");
+        "select 	t.numero as numero, coms.codi as codi_comanda,\n" +
+        "		coms.plats_totals as plats_totals, coms.plats_preparats as plats_preparats,\n" +
+        "		coms.cambrer as nom_cambrer, coms.finalitzada as finalitzada\n" +
+        "from taula t left join\n" +
+        "					(\n" +
+        "					select  co.codi as codi, ca.user as cambrer,\n" +
+        "							(select count(*) from linia_comanda where comanda = co.codi)\n" +
+        "								as plats_totals,\n" +
+        "							(select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA')\n" +
+        "								as plats_preparats,\n" +
+        "							co.finalitzada as finalitzada, co.taula as taula\n" +
+        "					from comanda co join cambrer ca on co.cambrer = ca.codi\n" +
+        "					where co.finalitzada = false\n" +
+        "					) coms\n" +
+        "			on coms.taula = t.numero\n" +
+        "order by t.numero"
+        );
+
         
         getTaulaSeleccionada = con.prepareStatement("select * from taula where numero = ?");
         getComandesPerTaula = con.prepareStatement("select * from comanda where taula = ? and finalitzada = ?");
@@ -90,6 +117,9 @@ public class DBManager {
         insertLiniaComanda = con.prepareStatement(
             "INSERT INTO LINIA_COMANDA (COMANDA, NUM, PLAT, QUANTITAT, ESTAT) VALUES\n" +
             "(?, ?, ?, ?, ?)");
+
+        updateBuidarTaula = con.prepareStatement(
+            "UPDATE COMANDA SET FINALITZADA = TRUE WHERE TAULA = ? AND FINALITZADA = FALSE");
     }
     
 
@@ -142,6 +172,7 @@ public class DBManager {
                 infoTaules.add(it);
             }
         } catch (SQLException ex) {
+            System.out.println("ERROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOORRRR");
             System.out.println(ex);
         }
         return infoTaules;
@@ -281,6 +312,32 @@ public class DBManager {
     }
     
     
+    public Integer buidarTaula(int numero) {
+        int filesModificades;
+        try {
+            System.out.println("DBM: Executant prepared statement buidarTaula");
+
+            updateBuidarTaula.setInt(1, numero);
+
+            filesModificades = updateBuidarTaula.executeUpdate();
+
+            if (filesModificades != 1) {
+                System.out.println("DBM: ERROR EN buidarTaula");
+                con.rollback();
+                // TODO EXIT
+                return -1;
+            }
+            
+            // En acabar d'inserir tot: COMMIT
+            con.commit();
+            System.out.println("DBM: taula buidada amb exit");
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+        return 0;
+    }
+    
+    
     
 
     // Construeix un objecte cambrer a partir de la fila actual en què es troba el ResultSet
@@ -310,17 +367,16 @@ public class DBManager {
         Integer numero = rs.getInt("numero"); // numero de taula
         Long codiComanda = rs.getLong("codi_comanda");
         Integer platsTotals = rs.getInt("plats_totals");
-        Integer platsPreparats = rs.getInt("plats_preparants");
+        Integer platsPreparats = rs.getInt("plats_preparats");
         String nomCambrer = rs.getString("nom_cambrer");
+        boolean comandaFinalitzada = rs.getBoolean("finalitzada");
         
         boolean esMeva = false;
         // si la taula no tenia cap cambrer: rs.wasNull()
         if (!rs.wasNull())
             esMeva = nomCambrer.equalsIgnoreCase(user); // taula és meva si el cambrer actual sóc jo
 
-        InfoTaula infoTaula = new InfoTaula(numero, codiComanda, esMeva, platsTotals, platsPreparats, nomCambrer);
-        System.out.println("Nova infotaula = "+numero+"/"+codiComanda+" cambrer="+nomCambrer+" esmeva="+esMeva);
-        System.out.println("\tuser="+user);
+        InfoTaula infoTaula = new InfoTaula(numero, codiComanda, esMeva, platsTotals, platsPreparats, nomCambrer, comandaFinalitzada);
         return infoTaula;
     }
 
