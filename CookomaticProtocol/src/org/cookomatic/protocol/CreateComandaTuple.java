@@ -5,20 +5,26 @@
  */
 package org.cookomatic.protocol;
 
+import java.io.Serializable;
+import java.util.List;
+import org.milaifontanals.cookomatic.model.sala.LiniaComanda;
+import org.milaifontanals.cookomatic.model.sala.Taula;
+
 /**
  *
  * @author Usuario
  */
-public class CreateComandaTuple {
+public class CreateComandaTuple implements Serializable{
     private long sessionId;
-    private int taula;
+    private Taula taula;
     private int numLiniesComanda;
-    // TODO Array de linia comanda
+    private List<LiniaComanda> linies;
 
-    public CreateComandaTuple(long sessionId, int taula, int numLiniesComanda) {
+    public CreateComandaTuple(long sessionId, Taula taula, int numLiniesComanda, List<LiniaComanda> linies) {
         setSessionId(sessionId);
         setTaula(taula);
         setNumLiniesComanda(numLiniesComanda);
+        this.linies = linies;
     }
     
     public long getSessionId() {
@@ -29,11 +35,11 @@ public class CreateComandaTuple {
         this.sessionId = sessionId;
     }
 
-    public int getTaula() {
+    public Taula getTaula() {
         return taula;
     }
 
-    public void setTaula(int taula) {
+    public void setTaula(Taula taula) {
         this.taula = taula;
     }
 
@@ -43,6 +49,14 @@ public class CreateComandaTuple {
 
     public void setNumLiniesComanda(int numLiniesComanda) {
         this.numLiniesComanda = numLiniesComanda;
+    }
+
+    public List<LiniaComanda> getLinies() {
+        return linies;
+    }
+
+    public void setLinies(List<LiniaComanda> linies) {
+        this.linies = linies;
     }
 
     

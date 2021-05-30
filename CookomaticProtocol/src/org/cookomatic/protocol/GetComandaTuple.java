@@ -5,11 +5,13 @@
  */
 package org.cookomatic.protocol;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Usuario
  */
-public class GetComandaTuple {
+public class GetComandaTuple implements Serializable{
     private long sessionId;
     private long codiComanda;
 

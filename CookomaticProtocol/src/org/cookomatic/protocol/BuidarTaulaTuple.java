@@ -5,11 +5,13 @@
  */
 package org.cookomatic.protocol;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Usuario
  */
-public class BuidarTaulaTuple {
+public class BuidarTaulaTuple implements Serializable{
     private long sessionId;
     private int taula;
 

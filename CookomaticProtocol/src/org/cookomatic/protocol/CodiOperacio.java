@@ -10,15 +10,16 @@ package org.cookomatic.protocol;
  * @author Usuario
  */
 public enum CodiOperacio {
-    KO              (-1),
-    OK              (0),
+    KO                      (-1),
+    OK                      (0),
     
-    LOGIN           (1),
-    GET_TAULES      (2),
-    GET_CARTA       (3),
-    GET_COMANDA     (4),
-    CREATE_COMANDA  (5),
-    BUIDAR_TAULA    (6);
+    LOGIN                   (1),
+    GET_TAULES              (2),
+    GET_CARTA               (3),
+    GET_COMANDA             (4),
+    CREATE_COMANDA          (5),
+    BUIDAR_TAULA            (6),
+    GET_TAULA_SELECCIONADA  (7);
 
     //--------------------------------------------------------------------
     private int numVal;

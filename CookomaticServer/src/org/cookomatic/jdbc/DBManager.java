@@ -13,12 +13,22 @@ import org.cookomatic.protocol.InfoTaula;
 import org.milaifontanals.cookomatic.model.cuina.Categoria;
 import org.milaifontanals.cookomatic.model.cuina.Plat;
 import org.milaifontanals.cookomatic.model.sala.Cambrer;
+import org.milaifontanals.cookomatic.model.sala.Comanda;
+import org.milaifontanals.cookomatic.model.sala.EstatLinia;
+import org.milaifontanals.cookomatic.model.sala.LiniaComanda;
+import org.milaifontanals.cookomatic.model.sala.Taula;
 
 public class DBManager {
 
     private Connection con;
     
     private PreparedStatement getTaules, getCategories, getPlats;
+    private PreparedStatement insertComanda, insertLiniaComanda;
+    private String insertComandaSql;
+    
+    // meves
+    private PreparedStatement getTaulaSeleccionada, getComandesPerTaula;
+
     
 
     public DBManager(String nomFitxerPropietats) {
@@ -65,8 +75,21 @@ public class DBManager {
         "where not(co.finalitzada) or co.finalitzada is null\n" +
         "order by t.numero");
         
+        getTaulaSeleccionada = con.prepareStatement("select * from taula where numero = ?");
+        getComandesPerTaula = con.prepareStatement("select * from comanda where taula = ? and finalitzada = ?");
+        
         getCategories = con.prepareStatement("select * from categoria");
         getPlats = con.prepareStatement("select * from plat");
+        
+
+        insertComanda = con.prepareStatement(
+                "INSERT INTO COMANDA (DATA, TAULA, CAMBRER, FINALITZADA)\n" +
+                            "VALUES (?, ?, ?, ?)",
+                Statement.RETURN_GENERATED_KEYS);
+
+        insertLiniaComanda = con.prepareStatement(
+            "INSERT INTO LINIA_COMANDA (COMANDA, NUM, PLAT, QUANTITAT, ESTAT) VALUES\n" +
+            "(?, ?, ?, ?, ?)");
     }
     
 
@@ -123,6 +146,25 @@ public class DBManager {
         }
         return infoTaules;
     }
+    
+    // Retorna taula seleccionada si trobada, null si no trobada en la BD
+    public Taula getTaulaSeleccionada(int numeroTaula) {
+        Taula taulaSeleccionada = null;
+        try {
+            System.out.println("Executant prepared statement getTaulaSeleccionada");
+            
+            getTaulaSeleccionada.setInt(1, numeroTaula);
+            ResultSet rs = getTaulaSeleccionada.executeQuery();
+            
+            if (rs.next())
+            {
+                taulaSeleccionada = construirTaulaSeleccionada(rs);
+            }
+        } catch (SQLException ex) {
+            System.out.println(ex);
+        }
+        return taulaSeleccionada;
+    }
 
 
     public List<Categoria> getCategories() {
@@ -160,6 +202,82 @@ public class DBManager {
             System.out.println(ex);
         }
         return plats;
+    }
+    
+    
+    
+    // DML
+    // Si la insert ha tingut èxit, retorna codi d'aquest nou registre. Altrament retorna -1
+    public Long insertComanda(Comanda comanda, List<LiniaComanda> linies) {
+        Long codiNovaComanda = (long)-1;
+        int filesInserides;
+        ResultSet rs = null;
+        try {
+            System.out.println("Executant prepared statement insertComanda");
+
+            java.sql.Date dataAux = new java.sql.Date(comanda.getData().getTime());
+        
+            insertComanda.setDate(1, dataAux);
+            insertComanda.setInt(2, comanda.getTaula().getNumero());
+            insertComanda.setLong(3, comanda.getCambrer().getCodi());
+            insertComanda.setBoolean(4, comanda.isFinalitzada());
+
+            filesInserides = insertComanda.executeUpdate();
+
+            if (filesInserides != 1) {
+                System.out.println("ERROR EN INSERT COMANDA");
+                con.rollback();
+                // TODO EXIT
+                return (long)-1;
+            }
+            
+            // Recuperem Codi de comanda recent inserida
+            rs = insertComanda.getGeneratedKeys();
+            if (rs.next()) {
+                codiNovaComanda = rs.getLong(1);
+            } else {
+                // Error en insert
+                System.out.println("ERROR EN INSERT COMANDA");
+                con.rollback();
+                // TODO EXIT
+                return null;
+            }
+            System.out.println("Codi de nova comanda = "+codiNovaComanda);
+
+
+            // Ara inserim linies de la comanda
+            int numLinia = 1;
+            for (LiniaComanda lc : linies)
+            {
+                insertLiniaComanda.setLong(1, codiNovaComanda);
+                insertLiniaComanda.setInt(2, numLinia);
+                insertLiniaComanda.setLong(3, lc.getItem().getCodi());
+                insertLiniaComanda.setInt(4, lc.getQuantitat());
+                insertLiniaComanda.setString(5, EstatLinia.EN_PREPARACIO.toString());
+                
+                filesInserides = insertLiniaComanda.executeUpdate();
+
+                if (filesInserides != 1) {
+                    System.out.println("ERROR EN INSERT LINIA COMANDA");
+                    // TODO EXIT
+                    return (long)-1;
+                }                
+                numLinia++;
+            }
+            
+            // En acabar d'inserir tot: COMMIT
+            con.commit();
+        } catch (SQLException ex) {
+            System.out.println(ex);
+            if (rs != null){
+                try {
+                    rs.close();
+                } catch (SQLException ex1) {
+                    System.out.println(ex1);
+                }
+            }
+        }
+        return codiNovaComanda;
     }
     
     
@@ -206,6 +324,37 @@ public class DBManager {
         return infoTaula;
     }
 
+
+    private Taula construirTaulaSeleccionada(ResultSet rs) throws SQLException {
+        System.out.println("CONSTRUIR TAULA SELECCIONADA");
+        Comanda comandaActiva = null;
+        
+        Integer numero = rs.getInt("numero"); // numero de taula
+
+        // Anem a buscar codi de la comanda activa que té aquesta taula
+        getComandesPerTaula.setInt(1, numero);
+        getComandesPerTaula.setBoolean(2, false); // set finalitzada = false
+        
+        // només retornarà 1 registre: 1 taula només pot tenir una comanda activa a la vegada
+        rs.close();
+        rs = getComandesPerTaula.executeQuery();
+        
+        if (rs.next())
+        {
+            // TODO: construir comanda fetch eager, nosaltres nomes agafarem els camps que ens interessen
+            comandaActiva = construirComanda(rs);
+        }
+        
+        Taula taula = new Taula(numero);
+        taula.setComandaActiva(comandaActiva);
+
+        return taula;
+    }
+
+
+
+
+
     // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
     private Categoria construirCategoria(ResultSet rs) throws SQLException {
         System.out.println("CONSTRUIR CATEGORIA");
@@ -217,6 +366,7 @@ public class DBManager {
         Categoria categoria = new Categoria(codi, nom, color);
         return categoria;        
     }
+    
 
 
     // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
@@ -238,5 +388,24 @@ public class DBManager {
         return plat;
     }
 
+
+    // Construeix un objecte comanda a partir de la fila actual en què es troba el ResultSet
+    private Comanda construirComanda(ResultSet rs) throws SQLException {
+        System.out.println("CONSTRUIR COMANDA");
+        
+        Long codi = rs.getLong("codi");
+        Date data = rs.getDate("data");
+        Integer taula = rs.getInt("taula");
+        Long codiCambrer = rs.getLong("cambrer");
+        Boolean finalitzada = rs.getBoolean("finalitzada");
+        
+        // TODO: recollir linies de comanda
+
+        // TODO: recollir cambrer
+        Cambrer cambrer = new Cambrer(codiCambrer, "c", "c", "c", "c", "c");
+        Comanda comanda = new Comanda(codi, data, new Taula(taula), cambrer, finalitzada);
+        
+        return comanda;
+    }
 
 }
