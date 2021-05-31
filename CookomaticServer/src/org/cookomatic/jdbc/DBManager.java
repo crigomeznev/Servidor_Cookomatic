@@ -26,7 +26,7 @@ public class DBManager {
     private PreparedStatement insertComanda, insertLiniaComanda, updateBuidarTaula;
     
     // meves
-    private PreparedStatement getTaulaSeleccionada, getComandesPerTaula;
+    private PreparedStatement getTaulaSeleccionada, getComandesPerTaula, getLiniesPerComanda;
 
     
 
@@ -62,26 +62,6 @@ public class DBManager {
     }
     
     private void prepararStatements() throws SQLException {
-//        getTaules = con.prepareStatement(
-//        "select 	t.numero as numero, co.codi as codi_comanda,\n" +
-//        "        (select count(*) from linia_comanda where comanda = co.codi)\n" +
-//        "			as plats_totals, -- platsTotals\n" +
-//        "        (select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA')\n" +
-//        "			as plats_preparants, -- platsPreparats\n" +
-//        "		ca.user as nom_cambrer\n" +
-//        "from taula t 	left join comanda co on co.taula = t.numero\n" +
-//        "				left join cambrer ca on co.cambrer = ca.codi\n" +
-//        "order by t.numero");
-//        getTaules = con.prepareStatement(
-//        "select t.numero as numero, co.codi as codi_comanda,\n" +
-//        "		(select count(*) from linia_comanda where comanda = co.codi) as plats_totals,\n" +
-//        "		(select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA') as plats_preparats,\n" +
-//        "		ca.user as nom_cambrer,\n" +
-//        "        co.finalitzada\n" +
-//        "from taula t 	left join comanda co on co.taula = t.numero\n" +
-//        "				left join cambrer ca on co.cambrer = ca.codi\n" +
-//        "where co.codi is null or co.finalitzada = false\n" +
-//        "order by t.numero");
         getTaules = con.prepareStatement(
         "select 	t.numero as numero, coms.codi as codi_comanda,\n" +
         "		coms.plats_totals as plats_totals, coms.plats_preparats as plats_preparats,\n" +
@@ -107,6 +87,12 @@ public class DBManager {
         
         getCategories = con.prepareStatement("select * from categoria");
         getPlats = con.prepareStatement("select * from plat");
+        
+        getLiniesPerComanda = con.prepareStatement(
+            "select 	lc.comanda, lc.num, lc.plat, lc.quantitat, lc.estat,\n" +
+            "		p.nom, p.descripcio_md, p.preu, p.foto, p.disponible, p.categoria\n" +
+            "from linia_comanda lc join plat p on lc.plat = p.codi\n" +
+            "where lc.comanda = ?");
         
 
         insertComanda = con.prepareStatement(
@@ -381,6 +367,7 @@ public class DBManager {
     }
 
 
+    // Construeix objecte taula amb comanda activa (si en té)
     private Taula construirTaulaSeleccionada(ResultSet rs) throws SQLException {
         System.out.println("CONSTRUIR TAULA SELECCIONADA");
         Comanda comandaActiva = null;
@@ -395,11 +382,13 @@ public class DBManager {
         rs.close();
         rs = getComandesPerTaula.executeQuery();
         
+        // si té comanda activa, la construirem
         if (rs.next())
         {
             // TODO: construir comanda fetch eager, nosaltres nomes agafarem els camps que ens interessen
             comandaActiva = construirComanda(rs);
         }
+        rs.close();
         
         Taula taula = new Taula(numero);
         taula.setComandaActiva(comandaActiva);
@@ -455,13 +444,50 @@ public class DBManager {
         Long codiCambrer = rs.getLong("cambrer");
         Boolean finalitzada = rs.getBoolean("finalitzada");
         
-        // TODO: recollir linies de comanda
-
         // TODO: recollir cambrer
         Cambrer cambrer = new Cambrer(codiCambrer, "c", "c", "c", "c", "c");
         Comanda comanda = new Comanda(codi, data, new Taula(taula), cambrer, finalitzada);
+
+        // TODO: recollir linies de comanda
+//        List<LiniaComanda> linies = new ArrayList<>();
+        getLiniesPerComanda.setLong(1, codi);
+        ResultSet rsLinies = getLiniesPerComanda.executeQuery();
+        while (rsLinies.next())
+        {
+            LiniaComanda lc = construirLiniaComanda(rsLinies);
+            comanda.addLinia(lc);
+        }
         
         return comanda;
+    }
+
+    // Construeix linia de comanda i plat
+    private LiniaComanda construirLiniaComanda(ResultSet rs) throws SQLException {
+        LiniaComanda lc = null;
+        
+        Long codiComanda = rs.getLong("comanda");
+        Integer num = rs.getInt("num");
+        Integer quantitat = rs.getInt("quantitat");
+        String estatS = rs.getString("estat");
+        EstatLinia estat = EstatLinia.valueOf(estatS);
+        
+        // Construir plat
+        Plat item = null;
+        Long codiPlat = rs.getLong("plat");
+        String nomPlat = rs.getString("nom");
+        String descripcioMD = rs.getString("descripcio_md");
+        BigDecimal preu = rs.getBigDecimal("preu");
+        java.sql.Blob foto = rs.getBlob("foto");
+        Boolean disponible = rs.getBoolean("disponible");
+        Long codiCategoria = rs.getLong("categoria");
+
+        Categoria cat = new Categoria(codiCategoria, null, 0);
+
+        // Construim plat i línia comanda
+        item = new Plat(codiPlat, nomPlat, descripcioMD, preu, foto, disponible, cat, null);
+        lc = new LiniaComanda(num, quantitat, estat, item);
+
+        return lc;
     }
 
 }

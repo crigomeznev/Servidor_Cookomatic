@@ -291,6 +291,7 @@ public class ClientHandler extends Thread {
     public void getTaulaSeleccionada()
     {
         Taula taulaSeleccionada = null;
+        Comanda comandaActiva = null;
         int numTaula;
         LoginTuple loginTuple;
         int res;
