@@ -206,13 +206,14 @@ public class DBManager {
     public List<Plat> getPlats() {
         List<Plat> plats = new ArrayList<>();
         try {
-            System.out.println("Executant prepared statement getCategories");
+            System.out.println("Executant prepared statement getplats");
 
             ResultSet rs = getPlats.executeQuery();
             
             while(rs.next())
             {
                 Plat plat = construirPlat(rs);
+//                System.out.println("Plat foto: "+plat.getFoto());
                 plats.add(plat);
             }
         } catch (SQLException ex) {
@@ -426,9 +427,13 @@ public class DBManager {
         Boolean disponible = rs.getBoolean("disponible");
         Long codiCategoria = rs.getLong("categoria");
         Categoria cat = new Categoria(codiCategoria, null, 0);
-
+        java.sql.Blob foto = rs.getBlob("foto");
+        System.out.println("foto recuperada: "+foto);
+        
         // com enllacem plat amb categoria? -> diccionari de codi - categoria, codi - plat
-        Plat plat = new Plat(codi, nom, descripcioMD, preu, null, disponible, cat, null);
+        Plat plat = new Plat(codi, nom, descripcioMD, preu, foto, disponible, cat, null);
+        
+        System.out.println("plat té foto: "+plat.getFoto());
 
         return plat;
     }

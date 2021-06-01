@@ -47,6 +47,16 @@ public class CookomaticServer {
     // Accés a la BD
     private DBManager dbManager;
 
+    private String nomFitxerPropietats;
+    
+    public DBManager getDbManager() {
+        return dbManager;
+    }
+
+    public void setDbManager(DBManager dbManager) {
+        this.dbManager = dbManager;
+    }
+
     
     
     // Constructor
@@ -54,6 +64,7 @@ public class CookomaticServer {
         this.dbManager = new DBManager(nomFitxerPropietats);
         this.clientHandlers = new ArrayList<>();
         this.sessionIds = new HashSet<>();
+        this.nomFitxerPropietats = nomFitxerPropietats;
 
         try {
             //create the socket server object
@@ -119,7 +130,7 @@ public class CookomaticServer {
 
                 // create a new thread object
 //                sessionCount++;
-                ClientHandler ch = new ClientHandler(s, ois, oos, cs, cs.dbManager);
+                ClientHandler ch = new ClientHandler(s, ois, oos, cs, cs.nomFitxerPropietats);
                 cs.clientHandlers.add(ch);
                 // ara donem session id al thread
 //                ch.setSessionId(client);

@@ -47,15 +47,20 @@ public class ClientHandler extends Thread {
 
     private boolean fiConnexio;
 
+//    private String nomFitxerPropietats;
+    
     // Constructor
-    public ClientHandler(Socket socket, ObjectInputStream ois, ObjectOutputStream oos, CookomaticServer server, DBManager dbManager) {
+    public ClientHandler(Socket socket, ObjectInputStream ois, ObjectOutputStream oos, 
+            CookomaticServer server, String nomFitxerPropietats) {
         this.socket = socket;
         this.ois = ois;
         this.oos = oos;
         this.loginTuple = new LoginTuple(null, null); // construim provisionalment tupla login amb id de sessió
         this.fiConnexio = false;
         this.server = server; // passem referència per esborrar clientHandler de la list de clientHandlers que té el servidor
-        this.dbManager = dbManager;
+        
+        
+        this.dbManager = new DBManager(nomFitxerPropietats);
         
         
        
@@ -619,6 +624,9 @@ public class ClientHandler extends Thread {
             // ara eliminem aquest registre de la llista de clienthandlers del servidor
             server.removeClientHandler(this);
 
+            // tanquem connexió a la BD
+            this.dbManager.tancarDBManager();
+            
         } catch (IOException e) {
             e.printStackTrace();
         }
