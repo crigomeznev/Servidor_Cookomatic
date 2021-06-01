@@ -10,6 +10,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.cookomatic.protocol.InfoTaula;
+import org.milaifontanals.cookomatic.exception.CookomaticException;
 import org.milaifontanals.cookomatic.model.cuina.Categoria;
 import org.milaifontanals.cookomatic.model.cuina.Plat;
 import org.milaifontanals.cookomatic.model.sala.Cambrer;
@@ -35,29 +36,32 @@ public class DBManager {
         try {
             p.load(new FileReader(nomFitxerPropietats));
         } catch (IOException ex) {
-            System.out.println("Problemes en carregar el fitxer de configuració");
-            System.out.println("Més info: " + ex.getMessage());
-            System.exit(1);
+            throw new CookomaticException("Problemes en carregar el fitxer de configuració. Més info: "+ex.getMessage(), ex);
+//            System.out.println("Problemes en carregar el fitxer de configuració");
+//            System.out.println("Més info: " + ex.getMessage());
+//            System.exit(1);
         }
         // p conté les propietats necessàries per la connexió
         String url = p.getProperty("url");
         String usu = p.getProperty("usuari");
         String pwd = p.getProperty("contrasenya");
         if (url == null || usu == null || pwd == null) {
-            System.out.println("Manca alguna de les propietats: url, usuari, contrasenya");
-            System.exit(1);
+            throw new CookomaticException("Manca alguna de les propietats: url, usuari, contrasenya");
+//            System.out.println();
+//            System.exit(1);
         }
         // Ja tenim les 3 propietats
         con = null;
         try {
             con = DriverManager.getConnection(url, usu, pwd);
-            System.out.println("Connexió establerta");
+//            System.out.println("Connexió establerta");
             con.setAutoCommit(false);   // Per defecte, tota connexió JDBC és amb AutoCommit(true)
             
             prepararStatements();
         } catch (SQLException sqle) {
-            sqle.printStackTrace();
-            System.exit(-1);
+            throw new CookomaticException("Error en establir connexió amb la BD", sqle);            
+//            sqle.printStackTrace();
+//            System.exit(-1);
         }
     }
     
@@ -116,7 +120,8 @@ public class DBManager {
                 con.close();
             }
         } catch (SQLException sqle) {
-            sqle.printStackTrace();
+            throw new CookomaticException("Error en tancar connexió amb la BD", sqle);            
+//            sqle.printStackTrace();
         }
     }
 
@@ -124,12 +129,12 @@ public class DBManager {
     // ACCÉS A DADES DE LA BD
     
     // Sabent que login (user) és ÚNIC
+    // Si hi ha qualsevol problema, cambrer retornat serà = NULL
     public Cambrer getCambrerPerUser(String user) {
         PreparedStatement ps;
         Cambrer cambrer = null;
         try {
-            System.out.println("Executant select * from cambrer where upper(user) like upper("+user+")");
-
+//            System.out.println("Executant select * from cambrer where upper(user) like upper("+user+")");
             ps = con.prepareStatement("SELECT * FROM CAMBRER WHERE UPPER(USER) LIKE UPPER(?)");
             ps.setString(1, user);
             ResultSet rs = ps.executeQuery();
@@ -137,18 +142,20 @@ public class DBManager {
             if (rs.next())
                 cambrer = construirCambrer(rs);
             else
-                System.out.println("Cambrer no consta a la BD");
+                System.out.println("[DBM]: ERROR Cambrer no consta a la BD");
         } catch (SQLException ex) {
+            System.out.println("[DBM]: ERROR En buscar cambrer per usuari a la BD");
             System.out.println(ex);
         }
         return cambrer;
     }
     
     // Retorna informació de les taules actuals en relació a l'usuari que fa la consulta
+    // Si hi ha qualsevol problema, taules retornades serà = NULL
     public List<InfoTaula> getTaules(String user) {
         List<InfoTaula> infoTaules = new ArrayList<>();
         try {
-            System.out.println("Executant prepared statement getTaules");
+//            System.out.println("Executant prepared statement getTaules");
 
             ResultSet rs = getTaules.executeQuery();
             
@@ -158,7 +165,7 @@ public class DBManager {
                 infoTaules.add(it);
             }
         } catch (SQLException ex) {
-            System.out.println("ERROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOORRRR");
+            System.out.println("[DBM]: ERROR En get informació actual de les taules a la BD");
             System.out.println(ex);
         }
         return infoTaules;
@@ -168,7 +175,7 @@ public class DBManager {
     public Taula getTaulaSeleccionada(int numeroTaula) {
         Taula taulaSeleccionada = null;
         try {
-            System.out.println("Executant prepared statement getTaulaSeleccionada");
+//            System.out.println("Executant prepared statement getTaulaSeleccionada");
             
             getTaulaSeleccionada.setInt(1, numeroTaula);
             ResultSet rs = getTaulaSeleccionada.executeQuery();
@@ -178,6 +185,7 @@ public class DBManager {
                 taulaSeleccionada = construirTaulaSeleccionada(rs);
             }
         } catch (SQLException ex) {
+            System.out.println("[DBM]: ERROR En get informació actual de taula seleccionada");
             System.out.println(ex);
         }
         return taulaSeleccionada;
@@ -187,7 +195,7 @@ public class DBManager {
     public List<Categoria> getCategories() {
         List<Categoria> categories = new ArrayList<>();
         try {
-            System.out.println("Executant prepared statement getCategories");
+//            System.out.println("Executant prepared statement getCategories");
 
             ResultSet rs = getCategories.executeQuery();
             
@@ -197,6 +205,7 @@ public class DBManager {
                 categories.add(categoria);
             }
         } catch (SQLException ex) {
+            System.out.println("[DBM]: ERROR En get categories");
             System.out.println(ex);
         }
         return categories;
@@ -206,8 +215,7 @@ public class DBManager {
     public List<Plat> getPlats() {
         List<Plat> plats = new ArrayList<>();
         try {
-            System.out.println("Executant prepared statement getplats");
-
+//            System.out.println("Executant prepared statement getplats");
             ResultSet rs = getPlats.executeQuery();
             
             while(rs.next())
@@ -217,6 +225,7 @@ public class DBManager {
                 plats.add(plat);
             }
         } catch (SQLException ex) {
+            System.out.println("[DBM]: ERROR En get plats");
             System.out.println(ex);
         }
         return plats;
@@ -231,7 +240,7 @@ public class DBManager {
         int filesInserides;
         ResultSet rs = null;
         try {
-            System.out.println("Executant prepared statement insertComanda");
+//            System.out.println("Executant prepared statement insertComanda");
 
             java.sql.Date dataAux = new java.sql.Date(comanda.getData().getTime());
         
@@ -243,7 +252,8 @@ public class DBManager {
             filesInserides = insertComanda.executeUpdate();
 
             if (filesInserides != 1) {
-                System.out.println("ERROR EN INSERT COMANDA");
+                
+                System.out.println("[DBM]: ERROR EN INSERIR NOVA COMANDA");
                 con.rollback();
                 // TODO EXIT
                 return (long)-1;
@@ -255,12 +265,13 @@ public class DBManager {
                 codiNovaComanda = rs.getLong(1);
             } else {
                 // Error en insert
-                System.out.println("ERROR EN INSERT COMANDA");
+                System.out.println("[DBM]: ERROR EN RECUPERAR CODI DE NOVA COMANDA");
+//                System.out.println("ERROR EN INSERT COMANDA");
                 con.rollback();
                 // TODO EXIT
                 return null;
             }
-            System.out.println("Codi de nova comanda = "+codiNovaComanda);
+            System.out.println("[DBM]: Codi de nova comanda = "+codiNovaComanda);
 
 
             // Ara inserim linies de la comanda
@@ -276,7 +287,7 @@ public class DBManager {
                 filesInserides = insertLiniaComanda.executeUpdate();
 
                 if (filesInserides != 1) {
-                    System.out.println("ERROR EN INSERT LINIA COMANDA");
+                    System.out.println("[DBM]: ERROR EN INSERT LINIES DE NOVA COMANDA");
                     // TODO EXIT
                     return (long)-1;
                 }                
@@ -302,14 +313,14 @@ public class DBManager {
     public Integer buidarTaula(int numero) {
         int filesModificades;
         try {
-            System.out.println("DBM: Executant prepared statement buidarTaula");
+//            System.out.println("DBM: Executant prepared statement buidarTaula");
 
             updateBuidarTaula.setInt(1, numero);
 
             filesModificades = updateBuidarTaula.executeUpdate();
 
             if (filesModificades != 1) {
-                System.out.println("DBM: ERROR EN buidarTaula");
+                System.out.println("[DBM]: ERROR EN buidarTaula");
                 con.rollback();
                 // TODO EXIT
                 return -1;
@@ -317,7 +328,7 @@ public class DBManager {
             
             // En acabar d'inserir tot: COMMIT
             con.commit();
-            System.out.println("DBM: taula buidada amb exit");
+            System.out.println("[DBM]: taula buidada amb exit");
         } catch (SQLException ex) {
             System.out.println(ex);
         }
@@ -329,7 +340,7 @@ public class DBManager {
 
     // Construeix un objecte cambrer a partir de la fila actual en què es troba el ResultSet
     private Cambrer construirCambrer(ResultSet rs) throws SQLException {
-        System.out.println("CONSTRUIR CAMBRER");
+//        System.out.println("CONSTRUIR CAMBRER");
         
         Long codi = rs.getLong("codi");
         String nom = rs.getString("nom");
@@ -349,7 +360,7 @@ public class DBManager {
      * @return InfoTaula
      */
     private InfoTaula construirInfoTaula(ResultSet rs, String user) throws SQLException {
-        System.out.println("CONSTRUIR INFOTAULA");
+//        System.out.println("CONSTRUIR INFOTAULA");
         
         Integer numero = rs.getInt("numero"); // numero de taula
         Long codiComanda = rs.getLong("codi_comanda");
@@ -370,7 +381,7 @@ public class DBManager {
 
     // Construeix objecte taula amb comanda activa (si en té)
     private Taula construirTaulaSeleccionada(ResultSet rs) throws SQLException {
-        System.out.println("CONSTRUIR TAULA SELECCIONADA");
+//        System.out.println("CONSTRUIR TAULA SELECCIONADA");
         Comanda comandaActiva = null;
         
         Integer numero = rs.getInt("numero"); // numero de taula
@@ -403,7 +414,7 @@ public class DBManager {
 
     // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
     private Categoria construirCategoria(ResultSet rs) throws SQLException {
-        System.out.println("CONSTRUIR CATEGORIA");
+//        System.out.println("CONSTRUIR CATEGORIA");
         
         Long codi = rs.getLong("codi");
         String nom = rs.getString("nom");
@@ -417,7 +428,7 @@ public class DBManager {
 
     // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
     private Plat construirPlat(ResultSet rs) throws SQLException {
-        System.out.println("CONSTRUIR PLAT");
+//        System.out.println("CONSTRUIR PLAT");
         
         Long codi = rs.getLong("codi");
         String nom = rs.getString("nom");
@@ -428,21 +439,16 @@ public class DBManager {
         Long codiCategoria = rs.getLong("categoria");
         Categoria cat = new Categoria(codiCategoria, null, 0);
         java.sql.Blob foto = rs.getBlob("foto");
-        System.out.println("foto recuperada: "+foto);
         
         // com enllacem plat amb categoria? -> diccionari de codi - categoria, codi - plat
         Plat plat = new Plat(codi, nom, descripcioMD, preu, foto, disponible, cat, null);
         
-        System.out.println("plat té foto: "+plat.getFoto());
-
         return plat;
     }
 
 
     // Construeix un objecte comanda a partir de la fila actual en què es troba el ResultSet
     private Comanda construirComanda(ResultSet rs) throws SQLException {
-        System.out.println("CONSTRUIR COMANDA");
-        
         Long codi = rs.getLong("codi");
         Date data = rs.getDate("data");
         Integer taula = rs.getInt("taula");
@@ -450,7 +456,7 @@ public class DBManager {
         Boolean finalitzada = rs.getBoolean("finalitzada");
         
         // TODO: recollir cambrer
-        Cambrer cambrer = new Cambrer(codiCambrer, "c", "c", "c", "c", "c");
+        Cambrer cambrer = new Cambrer(codiCambrer, "c", "c", "c", "c", "c"); // TODO: millorar
         Comanda comanda = new Comanda(codi, data, new Taula(taula), cambrer, finalitzada);
 
         // TODO: recollir linies de comanda

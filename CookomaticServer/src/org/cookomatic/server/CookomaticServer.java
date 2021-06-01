@@ -29,7 +29,7 @@ public class CookomaticServer {
     /**
      * @param args the command line arguments
      */
-//static ServerSocket variable
+    //static ServerSocket variable
     private static ServerSocket socketConnections;
     //socket server port on which it will listen
     private static int port = 9876;
@@ -45,23 +45,23 @@ public class CookomaticServer {
     private Set<Long> sessionIds; // llista a temps real on tindrem tots els session ids dels usuaris connectats en el moment
     
     // Accés a la BD
-    private DBManager dbManager;
+//    private DBManager dbManager;
 
     private String nomFitxerPropietats;
     
-    public DBManager getDbManager() {
-        return dbManager;
-    }
-
-    public void setDbManager(DBManager dbManager) {
-        this.dbManager = dbManager;
-    }
+//    public DBManager getDbManager() {
+//        return dbManager;
+//    }
+//
+//    public void setDbManager(DBManager dbManager) {
+//        this.dbManager = dbManager;
+//    }
 
     
     
     // Constructor
     public CookomaticServer(String nomFitxerPropietats) {
-        this.dbManager = new DBManager(nomFitxerPropietats);
+//        this.dbManager = new DBManager(nomFitxerPropietats); // REFACTOR: programa server no es connectarà a la BD en cap moment, li ho faran els clienthandlers
         this.clientHandlers = new ArrayList<>();
         this.sessionIds = new HashSet<>();
         this.nomFitxerPropietats = nomFitxerPropietats;
@@ -78,7 +78,7 @@ public class CookomaticServer {
     @Override
     protected void finalize() throws Throwable {
         System.out.println("Tancant servidor");
-        dbManager.tancarDBManager();
+//        dbManager.tancarDBManager();
         System.out.println("dbManager tancat");
 
         super.finalize(); //To change body of generated methods, choose Tools | Templates.
@@ -98,7 +98,6 @@ public class CookomaticServer {
     public static void main(String args[]) throws IOException, ClassNotFoundException {
         CookomaticServer cs = new CookomaticServer("connexioMySQL.properties");
         
-        
         // Tancar-ho tot quan tanquem el servidor
         Runtime.getRuntime().addShutdownHook(new Thread()
         {
@@ -115,25 +114,22 @@ public class CookomaticServer {
 
             try {
                 // socket object to receive incoming client requests
-                System.out.println("Esperant clients...");
+                System.out.println("=============================================================");
+                System.out.println("[SRV] Esperant clients...");
                 s = socketConnections.accept();
 
-                System.out.println("A new client is connected : " + s);
+                System.out.println("[SRV] Nou client connectat : " + s);
 
                 // obtaining input and out streams
-//                DataInputStream dis = new DataInputStream(s.getInputStream());
-//                DataOutputStream dos = new DataOutputStream(s.getOutputStream());
                 ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
                 ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
                 
-                System.out.println("Assigning new thread for this client");
+                System.out.println("[SRV] Client handlers = "+cs.clientHandlers.size());
+//                System.out.println("[SRV] Assignant ClientHandler per al client");
 
                 // create a new thread object
-//                sessionCount++;
                 ClientHandler ch = new ClientHandler(s, ois, oos, cs, cs.nomFitxerPropietats);
                 cs.clientHandlers.add(ch);
-                // ara donem session id al thread
-//                ch.setSessionId(client);
                 
                 // Invoking the start() method
                 ch.start();
@@ -191,7 +187,7 @@ public class CookomaticServer {
         if (ch.socket.isClosed())
             this.clientHandlers.remove(ch);
         else
-            System.out.println("No es pot eliminar clientHandler perque socket no està tancat");
+            System.out.println("[SRV]: No es pot eliminar clientHandler perque socket no està tancat");
     }
 
     
@@ -206,40 +202,27 @@ public class CookomaticServer {
         return newSessionId;
     }
     
-//    public boolean addSessionId(Long sessionId){
-//        boolean res = false;
-//        if (sessionId != null){
-//            res = sessionIds.add(sessionId);
-//        } else{
-//            System.out.println("no es pot inserir session id null");
-//        }
-//
-//        // si hem pogut afegir el client, incrementem sessionCount
-//        if (res) sessionCount++;
-//        return res;
-//    }
 
     public boolean removeSessionId(Long sessionId){
         if (sessionId != null){
             return sessionIds.remove(sessionId);
         } else{
-            System.out.println("no es pot eliminar session id null");
+            System.out.println("[SRV]: No es pot eliminar session id null");
             return false;
         }
     }
     
     public boolean sessionIdExists(Long sessionId){
-        System.out.println("session ids actuals:");
+        System.out.print("[SRV]: session ids actuals:");
         for(Long session_id : sessionIds){
-            System.out.println("session id = "+session_id);
+            System.out.print(session_id+", ");
         }
-        
-        
+        System.out.println();
         
         if (sessionId != null){
             return sessionIds.contains(sessionId);
         } else{
-            System.out.println("no es pot comprovar existencia de session id null");
+            System.out.println("[SRV]: no es pot comprovar existencia de session id null");
             return false;
         }        
     }
