@@ -6,7 +6,7 @@
 package org.cookomatic.protocol;
 
 import java.io.Serializable;
-import org.milaifontanals.cookomatic.model.sala.Cambrer;
+import org.cookomatic.model.sala.Cambrer;
 
 /**
  *

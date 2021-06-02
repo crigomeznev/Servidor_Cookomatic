@@ -10,14 +10,14 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.cookomatic.protocol.InfoTaula;
-import org.milaifontanals.cookomatic.exception.CookomaticException;
-import org.milaifontanals.cookomatic.model.cuina.Categoria;
-import org.milaifontanals.cookomatic.model.cuina.Plat;
-import org.milaifontanals.cookomatic.model.sala.Cambrer;
-import org.milaifontanals.cookomatic.model.sala.Comanda;
-import org.milaifontanals.cookomatic.model.sala.EstatLinia;
-import org.milaifontanals.cookomatic.model.sala.LiniaComanda;
-import org.milaifontanals.cookomatic.model.sala.Taula;
+import org.cookomatic.exception.CookomaticException;
+import org.cookomatic.model.cuina.Categoria;
+import org.cookomatic.model.cuina.Plat;
+import org.cookomatic.model.sala.Cambrer;
+import org.cookomatic.model.sala.Comanda;
+import org.cookomatic.model.sala.EstatLinia;
+import org.cookomatic.model.sala.LiniaComanda;
+import org.cookomatic.model.sala.Taula;
 
 public class DBManager {
 
@@ -37,9 +37,6 @@ public class DBManager {
             p.load(new FileReader(nomFitxerPropietats));
         } catch (IOException ex) {
             throw new CookomaticException("Problemes en carregar el fitxer de configuració. Més info: "+ex.getMessage(), ex);
-//            System.out.println("Problemes en carregar el fitxer de configuració");
-//            System.out.println("Més info: " + ex.getMessage());
-//            System.exit(1);
         }
         // p conté les propietats necessàries per la connexió
         String url = p.getProperty("url");
@@ -47,21 +44,15 @@ public class DBManager {
         String pwd = p.getProperty("contrasenya");
         if (url == null || usu == null || pwd == null) {
             throw new CookomaticException("Manca alguna de les propietats: url, usuari, contrasenya");
-//            System.out.println();
-//            System.exit(1);
         }
         // Ja tenim les 3 propietats
         con = null;
         try {
             con = DriverManager.getConnection(url, usu, pwd);
-//            System.out.println("Connexió establerta");
             con.setAutoCommit(false);   // Per defecte, tota connexió JDBC és amb AutoCommit(true)
-            
             prepararStatements();
         } catch (SQLException sqle) {
             throw new CookomaticException("Error en establir connexió amb la BD", sqle);            
-//            sqle.printStackTrace();
-//            System.exit(-1);
         }
     }
     
@@ -121,11 +112,12 @@ public class DBManager {
             }
         } catch (SQLException sqle) {
             throw new CookomaticException("Error en tancar connexió amb la BD", sqle);            
-//            sqle.printStackTrace();
         }
     }
 
 
+    
+    //---------------------------------------------------------------------------------------------------------------
     // ACCÉS A DADES DE LA BD
     
     // Sabent que login (user) és ÚNIC
@@ -134,7 +126,6 @@ public class DBManager {
         PreparedStatement ps;
         Cambrer cambrer = null;
         try {
-//            System.out.println("Executant select * from cambrer where upper(user) like upper("+user+")");
             ps = con.prepareStatement("SELECT * FROM CAMBRER WHERE UPPER(USER) LIKE UPPER(?)");
             ps.setString(1, user);
             ResultSet rs = ps.executeQuery();
@@ -149,14 +140,13 @@ public class DBManager {
         }
         return cambrer;
     }
+
     
     // Retorna informació de les taules actuals en relació a l'usuari que fa la consulta
     // Si hi ha qualsevol problema, taules retornades serà = NULL
     public List<InfoTaula> getTaules(String user) {
         List<InfoTaula> infoTaules = new ArrayList<>();
         try {
-//            System.out.println("Executant prepared statement getTaules");
-
             ResultSet rs = getTaules.executeQuery();
             
             while(rs.next())
@@ -171,12 +161,11 @@ public class DBManager {
         return infoTaules;
     }
     
+    
     // Retorna taula seleccionada si trobada, null si no trobada en la BD
     public Taula getTaulaSeleccionada(int numeroTaula) {
         Taula taulaSeleccionada = null;
         try {
-//            System.out.println("Executant prepared statement getTaulaSeleccionada");
-            
             getTaulaSeleccionada.setInt(1, numeroTaula);
             ResultSet rs = getTaulaSeleccionada.executeQuery();
             
@@ -195,8 +184,6 @@ public class DBManager {
     public List<Categoria> getCategories() {
         List<Categoria> categories = new ArrayList<>();
         try {
-//            System.out.println("Executant prepared statement getCategories");
-
             ResultSet rs = getCategories.executeQuery();
             
             while(rs.next())
@@ -215,13 +202,11 @@ public class DBManager {
     public List<Plat> getPlats() {
         List<Plat> plats = new ArrayList<>();
         try {
-//            System.out.println("Executant prepared statement getplats");
             ResultSet rs = getPlats.executeQuery();
             
             while(rs.next())
             {
                 Plat plat = construirPlat(rs);
-//                System.out.println("Plat foto: "+plat.getFoto());
                 plats.add(plat);
             }
         } catch (SQLException ex) {
@@ -240,8 +225,6 @@ public class DBManager {
         int filesInserides;
         ResultSet rs = null;
         try {
-//            System.out.println("Executant prepared statement insertComanda");
-
             java.sql.Date dataAux = new java.sql.Date(comanda.getData().getTime());
         
             insertComanda.setDate(1, dataAux);
@@ -266,7 +249,6 @@ public class DBManager {
             } else {
                 // Error en insert
                 System.out.println("[DBM]: ERROR EN RECUPERAR CODI DE NOVA COMANDA");
-//                System.out.println("ERROR EN INSERT COMANDA");
                 con.rollback();
                 // TODO EXIT
                 return null;
@@ -313,10 +295,7 @@ public class DBManager {
     public Integer buidarTaula(int numero) {
         int filesModificades;
         try {
-//            System.out.println("DBM: Executant prepared statement buidarTaula");
-
             updateBuidarTaula.setInt(1, numero);
-
             filesModificades = updateBuidarTaula.executeUpdate();
 
             if (filesModificades != 1) {
@@ -335,9 +314,15 @@ public class DBManager {
         return 0;
     }
     
-    
-    
 
+    
+    
+    
+    
+    
+    
+    //---------------------------------------------------------------------------------------------------------------
+    // CONSTRUIR OBJECTES
     // Construeix un objecte cambrer a partir de la fila actual en què es troba el ResultSet
     private Cambrer construirCambrer(ResultSet rs) throws SQLException {
 //        System.out.println("CONSTRUIR CAMBRER");
@@ -353,12 +338,7 @@ public class DBManager {
         return cambrer;        
     }
 
-    /**
-     * Retorna objecte InfoTaula a partir de dades BD
-     * @param rs: resultSet
-     * @param user: login de l'usuari que vol consultar aquesta informació
-     * @return InfoTaula
-     */
+
     private InfoTaula construirInfoTaula(ResultSet rs, String user) throws SQLException {
 //        System.out.println("CONSTRUIR INFOTAULA");
         
@@ -409,9 +389,6 @@ public class DBManager {
     }
 
 
-
-
-
     // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
     private Categoria construirCategoria(ResultSet rs) throws SQLException {
 //        System.out.println("CONSTRUIR CATEGORIA");
@@ -424,7 +401,6 @@ public class DBManager {
         return categoria;        
     }
     
-
 
     // Construeix un objecte categoria a partir de la fila actual en què es troba el ResultSet
     private Plat construirPlat(ResultSet rs) throws SQLException {
@@ -472,6 +448,7 @@ public class DBManager {
         return comanda;
     }
 
+    
     // Construeix linia de comanda i plat
     private LiniaComanda construirLiniaComanda(ResultSet rs) throws SQLException {
         LiniaComanda lc = null;

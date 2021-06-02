@@ -7,8 +7,8 @@ package org.cookomatic.protocol;
 
 import java.io.Serializable;
 import java.util.List;
-import org.milaifontanals.cookomatic.model.sala.LiniaComanda;
-import org.milaifontanals.cookomatic.model.sala.Taula;
+import org.cookomatic.model.sala.LiniaComanda;
+import org.cookomatic.model.sala.Taula;
 
 /**
  *

@@ -19,13 +19,13 @@ import org.cookomatic.protocol.CodiOperacio;
 import org.cookomatic.protocol.CreateComandaTuple;
 import org.cookomatic.protocol.InfoTaula;
 import org.cookomatic.protocol.LoginTuple;
-import org.milaifontanals.cookomatic.model.cuina.Categoria;
-import org.milaifontanals.cookomatic.model.cuina.Plat;
-import org.milaifontanals.cookomatic.model.sala.Cambrer;
-import org.milaifontanals.cookomatic.model.sala.Comanda;
-import org.milaifontanals.cookomatic.model.sala.LiniaComanda;
-import org.milaifontanals.cookomatic.model.sala.Taula;
-import org.milaifontanals.cookomatic.exception.CookomaticException;
+import org.cookomatic.model.cuina.Categoria;
+import org.cookomatic.model.cuina.Plat;
+import org.cookomatic.model.sala.Cambrer;
+import org.cookomatic.model.sala.Comanda;
+import org.cookomatic.model.sala.LiniaComanda;
+import org.cookomatic.model.sala.Taula;
+import org.cookomatic.exception.CookomaticException;
 
 /**
  *

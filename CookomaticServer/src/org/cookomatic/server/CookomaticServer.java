@@ -26,39 +26,28 @@ import org.cookomatic.protocol.LoginTuple;
  */
 public class CookomaticServer {
 
-    // TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
-    // MUTEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEX
-
     //static ServerSocket variable
     private static ServerSocket socketConnections;
     //socket server port on which it will listen
     private static int port = 9876;
 
     // TODO: llista de sockets i clients, per ara provem amb 1 client unic
-    Socket socket;
-    ObjectInputStream ois;
-    ObjectOutputStream oos;
+    private Socket socket;
+    private ObjectInputStream ois;
+    private ObjectOutputStream oos;
 
     private static long sessionCount;
-    
+
     private List<Thread> clientHandlers;
     private Set<Long> sessionIds; // llista a temps real on tindrem tots els session ids dels usuaris connectats en el moment
-    
+
     // Accés a la BD
 //    private DBManager dbManager;
-
     private String nomFitxerPropietats;
-    
-//    public DBManager getDbManager() {
-//        return dbManager;
-//    }
-//
-//    public void setDbManager(DBManager dbManager) {
-//        this.dbManager = dbManager;
-//    }
 
-    
-    
+    // mutex
+    private Object mutex = new Object();
+
     // Constructor
     public CookomaticServer(String nomFitxerPropietats) {
 //        this.dbManager = new DBManager(nomFitxerPropietats); // REFACTOR: programa server no es connectarà a la BD en cap moment, li ho faran els clienthandlers
@@ -67,7 +56,7 @@ public class CookomaticServer {
         this.nomFitxerPropietats = nomFitxerPropietats;
 
         try {
-            //create the socket server object
+            // ini socket que rep connexions
             this.socketConnections = new ServerSocket(port);
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
@@ -83,31 +72,21 @@ public class CookomaticServer {
 
         super.finalize(); //To change body of generated methods, choose Tools | Templates.
     }
-    
-    
-    
-    
-    
-    
+
     public static long getSessionCount() {
         return sessionCount;
     }
-    
-    
+
     // Main: el traurem d'aquí posteriorment
     public static void main(String args[]) throws IOException, ClassNotFoundException {
         CookomaticServer cs = new CookomaticServer("connexioMySQL.properties");
-        
+
         // Tancar-ho tot quan tanquem el servidor
-        Runtime.getRuntime().addShutdownHook(new Thread()
-        {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 System.out.println("TANCANT SERVIDOR");
             }
         });
-        
-        
-        
 
         while (true) { // TODO: while ! tancar servidor
             Socket s = null;
@@ -123,14 +102,14 @@ public class CookomaticServer {
                 // obtaining input and out streams
                 ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
                 ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
-                
-                System.out.println("[SRV] Client handlers = "+cs.clientHandlers.size());
+
+                System.out.println("[SRV] Client handlers = " + cs.clientHandlers.size());
 //                System.out.println("[SRV] Assignant ClientHandler per al client");
 
                 // create a new thread object
                 ClientHandler ch = new ClientHandler(s, ois, oos, cs, cs.nomFitxerPropietats);
                 cs.clientHandlers.add(ch);
-                
+
                 // Invoking the start() method
                 ch.start();
 
@@ -178,63 +157,51 @@ public class CookomaticServer {
         }
 
     }
-    
-    
-    
-    public void removeClientHandler(ClientHandler ch){
-        
-        // TODO: afegir mutex
-        if (ch.socket.isClosed())
-            this.clientHandlers.remove(ch);
-        else
-            System.out.println("[SRV]: No es pot eliminar clientHandler perque socket no està tancat");
-    }
 
-    
-    
+    public void removeClientHandler(ClientHandler ch) {
+        synchronized (mutex) {
+            if (ch.socket.isClosed()) {
+                this.clientHandlers.remove(ch);
+            } else {
+                System.out.println("[SRV]: No es pot eliminar clientHandler perque socket no està tancat");
+            }
+        }
+    }
 
     // retorna nou session id i l'afegeix a la llista
-    public Long getNewSessionId(){
-        long newSessionId = (long)sessionIds.size()+1;
-        
-        sessionIds.add(newSessionId);
-        
-        return newSessionId;
-    }
-    
+    public Long getNewSessionId() {
+        synchronized (mutex) {
+            long newSessionId = (long) sessionIds.size() + 1;
 
-    public boolean removeSessionId(Long sessionId){
-        if (sessionId != null){
-            return sessionIds.remove(sessionId);
-        } else{
-            System.out.println("[SRV]: No es pot eliminar session id null");
-            return false;
+            sessionIds.add(newSessionId);
+            return newSessionId;
         }
     }
-    
-    public boolean sessionIdExists(Long sessionId){
+
+    public boolean removeSessionId(Long sessionId) {
+        synchronized (mutex) {
+            if (sessionId != null) {
+                return sessionIds.remove(sessionId);
+            } else {
+                System.out.println("[SRV]: No es pot eliminar session id null");
+                return false;
+            }
+        }
+    }
+
+    public boolean sessionIdExists(Long sessionId) {
         System.out.print("[SRV]: session ids actuals:");
-        for(Long session_id : sessionIds){
-            System.out.print(session_id+", ");
+        for (Long session_id : sessionIds) {
+            System.out.print(session_id + ", ");
         }
         System.out.println();
-        
-        if (sessionId != null){
+
+        if (sessionId != null) {
             return sessionIds.contains(sessionId);
-        } else{
+        } else {
             System.out.println("[SRV]: no es pot comprovar existencia de session id null");
             return false;
-        }        
+        }
     }
-    
-    
-    
-    
-    
 
 }
-
-
-
-
-
