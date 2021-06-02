@@ -55,45 +55,49 @@ public class ClientHandler extends Thread {
 
     @Override
     public void run() {
-        int codiOperacio = 0;
+        int codiOpVal = 0;
 
         // el primer que fem es el login
             try {
                 // Llegim codi operació que vol el client
 //                System.out.println("Esperant petició del client");
-                codiOperacio = ois.readInt();
+                codiOpVal = ois.readInt();
 //                System.out.println("Petició rebuda = " + codiOperacio);
                 
-                switch (codiOperacio) {
-                    case 1:
+                // TODO: CodiOperacio.x
+                CodiOperacio codiEnum = CodiOperacio.getCodiFromVal(codiOpVal);
+                
+                switch (codiEnum) {
+                    case LOGIN:
 //                        System.out.println("User asked for LOGIN");
                         userLogin();
                         break;
-                    case 2:
+                    case GET_TAULES:
 //                        System.out.println("User asked for GetTaules");
                         getTaules();
                         break;
-                    case 3:
+                    case GET_CARTA:
 //                        System.out.println("User asked for GetCarta");
                         getCarta();
                         break;
-                    case 4:
+                    case GET_COMANDA:
 //                        System.out.println("User asked for GetComanda");
                         break;
-                    case 5:
+                    case CREATE_COMANDA:
 //                        System.out.println("User asked for CreateComanda");
                         createComanda();
                         break;
-                    case 6:
+                    case BUIDAR_TAULA:
 //                        System.out.println("User asked for BuidarTaula");
                         buidarTaula();
                         break;
-                    case 7:
+                    case GET_TAULA_SELECCIONADA:
 //                        System.out.println("User asked for GetTaulaSeleccionada");
                         getTaulaSeleccionada();
                         break;
-                    case -1:
+                    case LOGOUT:
 //                        System.out.println("User asked for TancarConnexio");
+                        userLogout();
                         break;
                     default:
                         System.out.println("Invalid operation");
@@ -168,6 +172,29 @@ public class ClientHandler extends Thread {
         }
     }
 
+    // Logout
+    public void userLogout() {
+        try {
+            // llegim loginTuple
+            loginTuple = (LoginTuple) ois.readObject();
+            System.out.println("[CH]: LOGOUT/logintuple rebuda: " + loginTuple.getCambrer().getUser() + "/" + loginTuple.getCambrer().getPassword());
+
+            // agafem el session id enviat i l'esborrem de la taula
+            server.removeSessionId(loginTuple.getSessionId());
+            
+            // enviem ok
+            oos.writeInt(1);
+            oos.flush();
+
+        } catch (IOException | ClassNotFoundException ex) {
+            System.out.println(ex);
+            ex.printStackTrace();
+            
+            throw new CookomaticException("[CH]: Error en fer logout", ex);
+        }
+    }
+
+    
     // GetTaules
     // Usem classe InfoTaula, que utilitza dades de les taules: Taula, Comanda, LiniaComanda i Cambrer
     public void getTaules() {
@@ -565,14 +592,16 @@ public class ClientHandler extends Thread {
             System.out.println("[CH]: Sockets tancats");
 
             // ara eliminem aquest registre de la llista de clienthandlers del servidor
-//            System.out.println("removing ch from list");
             server.removeClientHandler(this);            
+            // TODO: també hauriem d'eliminar el session id del servidor?
+//            server.removeSessionId(this.loginTuple.getSessionId());
             System.out.println("[CH]: ch eliminat de la llista del servidor");
-//            fiConnexio = true; // hauria d'anar abans..?
         } catch (IOException e) {
             System.out.println("[CH]: Error en tancar connexió");
             e.printStackTrace();
         }
+        
+        // TODO: logout -> quan client android faci logout, esborrarem el session id corresponent de la llista del servidor
 
     }
 

@@ -26,9 +26,9 @@ import org.cookomatic.protocol.LoginTuple;
  */
 public class CookomaticServer {
 
-    /**
-     * @param args the command line arguments
-     */
+    // TODOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+    // MUTEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEX
+
     //static ServerSocket variable
     private static ServerSocket socketConnections;
     //socket server port on which it will listen
