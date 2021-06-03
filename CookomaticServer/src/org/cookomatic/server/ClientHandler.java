@@ -32,6 +32,7 @@ import org.cookomatic.exception.CookomaticException;
  * @author Usuario
  */
 public class ClientHandler extends Thread {
+
     final ObjectInputStream ois;
     final ObjectOutputStream oos;
     final Socket socket;
@@ -43,14 +44,15 @@ public class ClientHandler extends Thread {
 
     // Constructor
     public ClientHandler(Socket socket, ObjectInputStream ois, ObjectOutputStream oos,
-            CookomaticServer server, String nomFitxerPropietats) {
+            CookomaticServer server, DBManager dbManager, String nomFitxerPropietats) {
         this.socket = socket;
         this.ois = ois;
         this.oos = oos;
         this.loginTuple = new LoginTuple(null, null); // construim provisionalment tupla login amb id de sessió
         this.server = server; // passem referència per esborrar clientHandler de la list de clientHandlers que té el servidor
 
-        this.dbManager = new DBManager(nomFitxerPropietats);
+        this.dbManager = dbManager;
+//        this.dbManager = new DBManager(nomFitxerPropietats);
     }
 
     @Override
@@ -58,61 +60,59 @@ public class ClientHandler extends Thread {
         int codiOpVal = 0;
 
         // el primer que fem es el login
-            try {
-                // Llegim codi operació que vol el client
+        try {
+            // Llegim codi operació que vol el client
 //                System.out.println("Esperant petició del client");
-                codiOpVal = ois.readInt();
+            codiOpVal = ois.readInt();
 //                System.out.println("Petició rebuda = " + codiOperacio);
-                
-                // TODO: CodiOperacio.x
-                CodiOperacio codiEnum = CodiOperacio.getCodiFromVal(codiOpVal);
-                
-                switch (codiEnum) {
-                    case LOGIN:
-//                        System.out.println("User asked for LOGIN");
-                        userLogin();
-                        break;
-                    case GET_TAULES:
-//                        System.out.println("User asked for GetTaules");
-                        getTaules();
-                        break;
-                    case GET_CARTA:
-//                        System.out.println("User asked for GetCarta");
-                        getCarta();
-                        break;
-                    case GET_COMANDA:
-//                        System.out.println("User asked for GetComanda");
-                        break;
-                    case CREATE_COMANDA:
-//                        System.out.println("User asked for CreateComanda");
-                        createComanda();
-                        break;
-                    case BUIDAR_TAULA:
-//                        System.out.println("User asked for BuidarTaula");
-                        buidarTaula();
-                        break;
-                    case GET_TAULA_SELECCIONADA:
-//                        System.out.println("User asked for GetTaulaSeleccionada");
-                        getTaulaSeleccionada();
-                        break;
-                    case LOGOUT:
-//                        System.out.println("User asked for TancarConnexio");
-                        userLogout();
-                        break;
-                    default:
-                        System.out.println("Invalid operation");
-                    // TODO: llençar exception
-                    }
 
-            } catch (Exception ex) {
-                System.out.println("[CH - SwITCH] Excepció no controlada");
-                System.out.println(ex.getMessage());
-                ex.printStackTrace();
-            } finally {
-                System.out.println("Finally del switch: entrant");
-                tancarClientHandler();
-                System.out.println("Finally del switch: sortint");
+            // TODO: CodiOperacio.x
+            CodiOperacio codiEnum = CodiOperacio.getCodiFromVal(codiOpVal);
+
+            switch (codiEnum) {
+                case LOGIN:
+//                        System.out.println("User asked for LOGIN");
+                    userLogin();
+                    break;
+                case GET_TAULES:
+//                        System.out.println("User asked for GetTaules");
+                    getTaules();
+                    break;
+                case GET_CARTA:
+//                        System.out.println("User asked for GetCarta");
+                    getCarta();
+                    break;
+                case GET_COMANDA:
+//                        System.out.println("User asked for GetComanda");
+                    break;
+                case CREATE_COMANDA:
+//                        System.out.println("User asked for CreateComanda");
+                    createComanda();
+                    break;
+                case BUIDAR_TAULA:
+//                        System.out.println("User asked for BuidarTaula");
+                    buidarTaula();
+                    break;
+                case GET_TAULA_SELECCIONADA:
+//                        System.out.println("User asked for GetTaulaSeleccionada");
+                    getTaulaSeleccionada();
+                    break;
+                case LOGOUT:
+//                        System.out.println("User asked for TancarConnexio");
+                    userLogout();
+                    break;
+                default:
+                    System.out.println("Invalid operation");
+                // TODO: llençar exception
             }
+
+        } catch (Exception ex) {
+            System.out.println("[CH - SwITCH] Excepció no controlada: "+ex.getMessage());
+//            ex.printStackTrace();
+        } finally {
+            tancarClientHandler();
+            System.out.println("Client handler tancat");
+        }
     }
 
     // ACCÉS A LA BD
@@ -122,7 +122,7 @@ public class ClientHandler extends Thread {
             // llegim loginTuple
 //            System.out.println("llegint logintuple");
             loginTuple = (LoginTuple) ois.readObject();
-            System.out.println("logintuple rebuda: " + loginTuple.getCambrer().getUser() + "/" + loginTuple.getCambrer().getPassword());
+            System.out.println("[CH]: logintuple rebuda: " + loginTuple.getCambrer().getUser() + "/" + loginTuple.getCambrer().getPassword());
             // enviem ok
             oos.writeInt(1);
             oos.flush();
@@ -130,48 +130,48 @@ public class ClientHandler extends Thread {
             // client envia inicialment sense sessionId, som nosaltres qui l'hi donarem
             // Comprovació que la contrasenya introduida per l'usuari és la correcta
             Cambrer c = dbManager.getCambrerPerUser(loginTuple.getCambrer().getUser());
-            System.out.println("Cambrer llegit: "+c);
+//            System.out.println("Cambrer llegit: " + c);
             // prova
 //            boolean credencialsCorrectes = lt.getUser().equalsIgnoreCase(lt.getPassword());
             int res = 0;
             if (c != null) {
                 boolean credencialsCorrectes = loginTuple.getCambrer().getPassword().equalsIgnoreCase(c.getPassword());
                 res = credencialsCorrectes ? CodiOperacio.OK.getNumVal() : CodiOperacio.KO.getNumVal();
-            } else{
+            } else {
                 res = CodiOperacio.KO.getNumVal();
             }
-                // enviem 1 si ok, 0 si no ok
-                System.out.println("[LOGIN]: Enviant resposta");
-                oos.writeInt(res);
-                oos.flush();
-                System.out.println("[LOGIN]: Resposta enviada");
+            // enviem 1 si ok, 0 si no ok
+            System.out.println("[LOGIN]: Enviant resposta");
+            oos.writeInt(res);
+            oos.flush();
+            System.out.println("[LOGIN]: Resposta enviada");
 //            oos.writeObject(res);
 
-                // si la resposta ha estat ok, també enviem tupla amb session_id i dades usu
-                if (res == CodiOperacio.OK.getNumVal()) {
-                    // Assignem dades del cambrer a la loginTuple
-                    loginTuple.setCambrer(c);
+            // si la resposta ha estat ok, també enviem tupla amb session_id i dades usu
+            if (res == CodiOperacio.OK.getNumVal()) {
+                // Assignem dades del cambrer a la loginTuple
+                loginTuple.setCambrer(c);
 
-                    // demanem al server un nou session id (ell s'encarregarà d'afegir-lo en una llista)
-                    loginTuple.setSessionId(server.getNewSessionId());
+                // demanem al server un nou session id (ell s'encarregarà d'afegir-lo en una llista)
+                loginTuple.setSessionId(server.getNewSessionId());
 
-                    oos.writeObject(loginTuple);
-                    oos.flush();
-                    // llegim ok
-                    ois.readInt();
-                } else{
+                oos.writeObject(loginTuple);
+                oos.flush();
+                // llegim ok
+                ois.readInt();
+            } else {
 //            } else {
                 // Cambrer no trobat en la BD
                 // enviem 1 si ok, 0 si no ok
 //                oos.flush();
 //                oos.writeInt(CodiOperacio.KO.getNumVal());
 //            oos.writeObject(res);
-                System.out.println("El cambrer no consta a la BD. Resposta enviada");
-                }
+                System.out.println("[CH]: El cambrer no consta a la BD. Resposta enviada");
+            }
         } catch (IOException | ClassNotFoundException ex) {
             System.out.println(ex);
             ex.printStackTrace();
-            
+
             throw new CookomaticException("[CH]: Error en fer login", ex);
         }
     }
@@ -185,7 +185,7 @@ public class ClientHandler extends Thread {
 
             // agafem el session id enviat i l'esborrem de la taula
             server.removeSessionId(loginTuple.getSessionId());
-            
+
             // enviem ok
             oos.writeInt(1);
             oos.flush();
@@ -193,12 +193,11 @@ public class ClientHandler extends Thread {
         } catch (IOException | ClassNotFoundException ex) {
             System.out.println(ex);
             ex.printStackTrace();
-            
+
             throw new CookomaticException("[CH]: Error en fer logout", ex);
         }
     }
 
-    
     // GetTaules
     // Usem classe InfoTaula, que utilitza dades de les taules: Taula, Comanda, LiniaComanda i Cambrer
     public void getTaules() {
@@ -258,7 +257,7 @@ public class ClientHandler extends Thread {
         } catch (Exception ex) {
 //            System.out.println(ex);
 //            ex.printStackTrace();
-            throw new CookomaticException("[CH]: Error en gettaules", ex);
+            throw new CookomaticException("[CH]: Error en get taules: "+ex.getMessage(), ex);
         } finally {
 //            try {
 //                oos.close();
@@ -402,7 +401,6 @@ public class ClientHandler extends Thread {
 
             // Enviem arraylist element a element
             for (Plat plat : plats) {
-                System.out.println(plat);
                 oos.writeObject(plat);
                 oos.flush();
 
@@ -439,9 +437,7 @@ public class ClientHandler extends Thread {
 
         try {
             // llegim sessionId (logintuple)
-//            System.out.println("llegint logintuple");
             loginTuple = (LoginTuple) ois.readObject();
-//            System.out.println("sessionId llegit = " + loginTuple.getSessionId());
 
             // enviem resposta: procedirem si session id existeix en el server actualment, altrament avortarem
             if (server.sessionIdExists(loginTuple.getSessionId())) {
@@ -456,8 +452,6 @@ public class ClientHandler extends Thread {
             // Si el session id del client no coincideix amb el del client actual, avortem operació
             // Cada ClientHandler que atén a un client té un session id
             if (res == CodiOperacio.KO.getNumVal()) {
-//                System.out.println("Session ID erroni, avortem operació");
-//                return;
                 throw new CookomaticException("[CH]: Session ID erroni, avortem operació");
             }
 
@@ -470,8 +464,9 @@ public class ClientHandler extends Thread {
                 comanda = new Comanda(0, new Date(), createComandaTuple.getTaula(), loginTuple.getCambrer(), false);
 
                 // dbManager retornarà -1 si no ha pogut fer l'insert
-                nouCodi = dbManager.insertComanda(comanda, createComandaTuple.getLinies());
-
+                synchronized (server.getMutex()) {
+                    nouCodi = dbManager.insertComanda(comanda, createComandaTuple.getLinies());
+                }
             } catch (CookomaticException ex) {
                 // taula ja te comanda activa, retornem codi null
                 System.out.println(ex.getMessage());
@@ -479,10 +474,6 @@ public class ClientHandler extends Thread {
                 nouCodi = (long) -1;
             }
 
-//            if (nouCodi == -1)
-//            {
-//                throw new Exception("CH: ERROR EN INSERT NOVA COMANDA");
-//            }
             // Enviem codi de nova comanda: pot ser -1: comanda no inserida amb exit
             oos.writeLong(nouCodi);
             oos.flush();
@@ -546,8 +537,9 @@ public class ClientHandler extends Thread {
             // sessionId vàlid, llegim infoTaula
             infoTaula = (InfoTaula) ois.readObject();
 
-            res = dbManager.buidarTaula(infoTaula.getNumero());
-
+            synchronized (server.getMutex()) {
+                res = dbManager.buidarTaula(infoTaula.getNumero());
+            }
             // Enviem resposta
             oos.writeInt(res);
             oos.flush();
@@ -556,7 +548,7 @@ public class ClientHandler extends Thread {
 //            System.out.println(ex);
 //            ex.printStackTrace();
             throw new CookomaticException("[CH]: Error en buidar taula", ex);
-        } 
+        }
 //        finally {
 ////            try {
 ////                oos.close();
@@ -583,31 +575,32 @@ public class ClientHandler extends Thread {
 
     private void tancarClientHandler() {
         try {
-            // tanquem connexió a la BD
-            this.dbManager.tancarDBManager();
-            System.out.println("[CH]: Connexió amb la BD tancada");
-            
+//            // tanquem connexió a la BD
+//            this.dbManager.tancarDBManager();
+//            System.out.println("[CH]: Connexió amb la BD tancada");
+
             // Deixem aquestes línies per al final ja que son les que poden donar problemes
             // closing resources
 //            System.out.println("Closing sockets.");
-            if (!this.socket.isClosed())
+            if (!this.socket.isClosed()) {
                 this.socket.close();
+            }
             this.ois.close();
             this.oos.close();
             System.out.println("[CH]: Sockets tancats");
 
             // ara eliminem aquest registre de la llista de clienthandlers del servidor
-            server.removeClientHandler(this);            
+            server.removeClientHandler(this);
             // TODO: també hauriem d'eliminar el session id del servidor?
 //            server.removeSessionId(this.loginTuple.getSessionId());
             System.out.println("[CH]: ch eliminat de la llista del servidor");
         } catch (IOException e) {
-            System.out.println("[CH]: Error en tancar connexió");
-            e.printStackTrace();
+            System.out.println("[CH]: Error en tancar connexió: ");
+            System.out.println(e.getMessage());
+//            e.printStackTrace();
         }
-        
-        // TODO: logout -> quan client android faci logout, esborrarem el session id corresponent de la llista del servidor
 
+        // TODO: logout -> quan client android faci logout, esborrarem el session id corresponent de la llista del servidor
     }
 
 }

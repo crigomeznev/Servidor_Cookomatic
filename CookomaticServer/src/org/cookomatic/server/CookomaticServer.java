@@ -42,15 +42,23 @@ public class CookomaticServer {
     private Set<Long> sessionIds; // llista a temps real on tindrem tots els session ids dels usuaris connectats en el moment
 
     // Accés a la BD
-//    private DBManager dbManager;
+    private DBManager dbManager;
     private String nomFitxerPropietats;
 
     // mutex
     private Object mutex = new Object();
+    public Object getMutex() {
+        return mutex;
+    }
+    
 
     // Constructor
     public CookomaticServer(String nomFitxerPropietats) {
-//        this.dbManager = new DBManager(nomFitxerPropietats); // REFACTOR: programa server no es connectarà a la BD en cap moment, li ho faran els clienthandlers
+        this.dbManager = new DBManager(nomFitxerPropietats); // REFACTOR: programa server no es connectarà a la BD en cap moment, li ho faran els clienthandlers
+
+
+
+
         this.clientHandlers = new ArrayList<>();
         this.sessionIds = new HashSet<>();
         this.nomFitxerPropietats = nomFitxerPropietats;
@@ -59,9 +67,13 @@ public class CookomaticServer {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
-                System.out.println("SHUTDOWNHOOK: TANCANT EL SERVER");
+                System.out.println("[SRV]: SHUTDOWNHOOK: TANCANT EL SERVER");
 
                 try {
+                    // tanquem connexió a la BD
+                    dbManager.tancarDBManager();
+                    System.out.println("[SRV]: Connexió amb la BD tancada");
+                    
                     // Tancar socket de connexions
                     if (socketConnections != null) {
                         socketConnections.close();
@@ -75,7 +87,7 @@ public class CookomaticServer {
                     System.out.println(ex.getMessage());
                 }
 
-                System.out.println("SERVIDOR TANCAT COMPLETAMENT");
+                System.out.println("[SRV]: SERVIDOR TANCAT COMPLETAMENT");
             }
         });
 
@@ -131,7 +143,7 @@ public class CookomaticServer {
 //                System.out.println("[SRV] Assignant ClientHandler per al client");
 
                 // create a new thread object
-                ClientHandler ch = new ClientHandler(s, ois, oos, cs, cs.nomFitxerPropietats);
+                ClientHandler ch = new ClientHandler(s, ois, oos, cs, cs.dbManager, cs.nomFitxerPropietats);
                 cs.clientHandlers.add(ch);
 
                 // Invoking the start() method
@@ -227,5 +239,6 @@ public class CookomaticServer {
             return false;
         }
     }
+
 
 }
