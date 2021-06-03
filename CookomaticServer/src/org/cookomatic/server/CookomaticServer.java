@@ -55,6 +55,30 @@ public class CookomaticServer {
         this.sessionIds = new HashSet<>();
         this.nomFitxerPropietats = nomFitxerPropietats;
 
+        // aturar el servidor correctament
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                System.out.println("SHUTDOWNHOOK: TANCANT EL SERVER");
+
+                try {
+                    // Tancar socket de connexions
+                    if (socketConnections != null) {
+                        socketConnections.close();
+                    }
+
+                    // tancar tots els fils
+                    for (Thread ch : clientHandlers) {
+                        ch.wait();
+                    }
+                } catch (Exception ex) {
+                    System.out.println(ex.getMessage());
+                }
+
+                System.out.println("SERVIDOR TANCAT COMPLETAMENT");
+            }
+        });
+
         try {
             // ini socket que rep connexions
             this.socketConnections = new ServerSocket(port);

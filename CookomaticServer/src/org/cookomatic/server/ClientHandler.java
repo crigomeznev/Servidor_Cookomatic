@@ -130,20 +130,25 @@ public class ClientHandler extends Thread {
             // client envia inicialment sense sessionId, som nosaltres qui l'hi donarem
             // Comprovació que la contrasenya introduida per l'usuari és la correcta
             Cambrer c = dbManager.getCambrerPerUser(loginTuple.getCambrer().getUser());
-
+            System.out.println("Cambrer llegit: "+c);
             // prova
 //            boolean credencialsCorrectes = lt.getUser().equalsIgnoreCase(lt.getPassword());
+            int res = 0;
             if (c != null) {
                 boolean credencialsCorrectes = loginTuple.getCambrer().getPassword().equalsIgnoreCase(c.getPassword());
-                int res = credencialsCorrectes ? 1 : 0;
-
+                res = credencialsCorrectes ? CodiOperacio.OK.getNumVal() : CodiOperacio.KO.getNumVal();
+            } else{
+                res = CodiOperacio.KO.getNumVal();
+            }
                 // enviem 1 si ok, 0 si no ok
-                oos.flush();
+                System.out.println("[LOGIN]: Enviant resposta");
                 oos.writeInt(res);
+                oos.flush();
+                System.out.println("[LOGIN]: Resposta enviada");
 //            oos.writeObject(res);
 
                 // si la resposta ha estat ok, també enviem tupla amb session_id i dades usu
-                if (credencialsCorrectes) {
+                if (res == CodiOperacio.OK.getNumVal()) {
                     // Assignem dades del cambrer a la loginTuple
                     loginTuple.setCambrer(c);
 
@@ -154,16 +159,15 @@ public class ClientHandler extends Thread {
                     oos.flush();
                     // llegim ok
                     ois.readInt();
-                }
-            } else {
+                } else{
+//            } else {
                 // Cambrer no trobat en la BD
                 // enviem 1 si ok, 0 si no ok
-                oos.flush();
-                oos.writeInt(0);
+//                oos.flush();
+//                oos.writeInt(CodiOperacio.KO.getNumVal());
 //            oos.writeObject(res);
                 System.out.println("El cambrer no consta a la BD. Resposta enviada");
-            }
-
+                }
         } catch (IOException | ClassNotFoundException ex) {
             System.out.println(ex);
             ex.printStackTrace();
@@ -586,7 +590,8 @@ public class ClientHandler extends Thread {
             // Deixem aquestes línies per al final ja que son les que poden donar problemes
             // closing resources
 //            System.out.println("Closing sockets.");
-            this.socket.close();
+            if (!this.socket.isClosed())
+                this.socket.close();
             this.ois.close();
             this.oos.close();
             System.out.println("[CH]: Sockets tancats");
