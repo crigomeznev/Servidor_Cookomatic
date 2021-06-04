@@ -56,24 +56,25 @@ public class DBManager {
     }
 
     private void prepararStatements() throws SQLException {
-        getTaules = con.prepareStatement(
-                "select 	t.numero as numero, coms.codi as codi_comanda,\n"
-                + "		coms.plats_totals as plats_totals, coms.plats_preparats as plats_preparats,\n"
-                + "		coms.cambrer as nom_cambrer, coms.finalitzada as finalitzada\n"
-                + "from taula t left join\n"
-                + "					(\n"
-                + "					select  co.codi as codi, ca.user as cambrer,\n"
-                + "							(select count(*) from linia_comanda where comanda = co.codi)\n"
-                + "								as plats_totals,\n"
-                + "							(select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA')\n"
-                + "								as plats_preparats,\n"
-                + "							co.finalitzada as finalitzada, co.taula as taula\n"
-                + "					from comanda co join cambrer ca on co.cambrer = ca.codi\n"
-                + "					where co.finalitzada = false\n"
-                + "					) coms\n"
-                + "			on coms.taula = t.numero\n"
-                + "order by t.numero"
-        );
+//        getTaules = con.prepareStatement(
+//                "select 	t.numero as numero, coms.codi as codi_comanda,\n"
+//                + "		coms.plats_totals as plats_totals, coms.plats_preparats as plats_preparats,\n"
+//                + "		coms.cambrer as nom_cambrer, coms.finalitzada as finalitzada\n"
+//                + "from taula t left join\n"
+//                + "					(\n"
+//                + "					select  co.codi as codi, ca.user as cambrer,\n"
+//                + "							(select count(*) from linia_comanda where comanda = co.codi)\n"
+//                + "								as plats_totals,\n"
+//                + "							(select count(*) from linia_comanda where comanda = co.codi and upper(estat) like 'PREPARADA')\n"
+//                + "								as plats_preparats,\n"
+//                + "							co.finalitzada as finalitzada, co.taula as taula\n"
+//                + "					from comanda co join cambrer ca on co.cambrer = ca.codi\n"
+//                + "					where co.finalitzada = false\n"
+//                + "					) coms\n"
+//                + "			on coms.taula = t.numero\n"
+//                + "order by t.numero"
+//        );
+        getTaules = con.prepareStatement("SELECT * FROM VISTA_INFOTAULA");
 
         getTaulaSeleccionada = con.prepareStatement("select * from taula where numero = ?");
         getComandesPerTaula = con.prepareStatement("select * from comanda where taula = ? and finalitzada = ?");
